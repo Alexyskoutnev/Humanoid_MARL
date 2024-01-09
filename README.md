@@ -31,6 +31,14 @@ To maintain consistency across systems, a Conda environment is used to manage al
      ```bash
    conda env create -f environment.yml
    ```
-   
+
+# Experiements 
+In this research project, we conduct experiments to evaluate potential ideas and research directions. Each experiment is initially performed in a Jupyter notebook to assess the feasibility and potential of a particular idea before building the final framework. This iterative process allows us to gauge the experimental idea's potential and determine how it contributes to the overarching research goals.
+## Format
+- Each experiment is designed to accomplish a task within a timeframe of '1-3 days'. The emphasis on shorter tasks promotes efficiency and enables rapid iteration. 
+- At the beginning of each Jupyter notebook, a comprehensive description is provided to outline the experiment's objectives. This narrative serves to contextualize the experiment and align it with the broader research goals.
+## Structure 
+Experiments are organized within the `experiments` folder. This structure facilitates an iterative exploration of various ideas, allowing us to gather insights before defining the framework's scope. The goal is to first conduct experiments, formulate valid and novel research questions, and then guide the subsequent development of the research project.
+
 ## NOTICE
 This repo in the development state, feel free to contact Alexy with any bug reports or additions needed to the repository. 
