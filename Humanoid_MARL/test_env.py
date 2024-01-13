@@ -24,17 +24,31 @@ from etils import epath
 import jax
 from jax import numpy as jp
 import mujoco
+import base64
 
 #Visuals
 import mediapy as media
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+from IPython.display import HTML, clear_output, display
 
-from IPython.display import HTML, clear_output
+
+# Create a function to update the displayed image in the animation
+def update(frame):
+    plt.imshow(frame)
+    
+def video(frames):
+    # Create a figure and axis
+    fig, ax = plt.subplots()
+
+    # Set up the animation
+    ani = animation.FuncAnimation(fig, update, frames=frames, interval=10, repeat=True)
+
+    # Display the animation
+    plt.show()
+
 
 class Humanoid(PipelineEnv):
-
-
-
   # pyformat: disable
   """
   ### Description
@@ -193,15 +207,23 @@ class Humanoid(PipelineEnv):
       reset_noise_scale=1e-2,
       exclude_current_positions_from_observation=True,
       backend='generalized',
+      xml_path = None,
       **kwargs,
   ):
-    path = epath.resource_path('brax') / 'envs/assets/humanoid.xml'
-    sys = mjcf.load(path)
+    if xml_path:
+      path = xml_path
+      sys = mjcf.load(path)
+    else:
+      path = epath.resource_path('brax') / 'envs/assets/humanoid.xml'
+      sys = mjcf.load(path)
+
     with open(path, 'r') as f_path:
-        breakpoint()
         xml_string  = f_path.read()
         mj_model = mujoco.MjModel.from_xml_string(xml_string)
-    renderer = mujoco.Renderer(mj_model)
+    
+    self.mj_model = mj_model
+    self.mj_data = mujoco.MjData(mj_model)
+    self.renderer = mujoco.Renderer(mj_model)
 
     n_frames = 5
 
@@ -358,19 +380,48 @@ class Humanoid(PipelineEnv):
 def run():
   pass
 
-
-
 if __name__ == "__main__":
 
     backend = ""
-    env = Humanoid()
+    backend_visual = 'mujoco'
+    xml_path = "./Humanoid_MARL/assets/humanoid_1.xml"
+    env = Humanoid(xml_path=xml_path)
 
-    jit_env_reset = jax.jit(env.reset)
-    jit_env_step = jax.jit(env.step)
+    if backend_visual == 'mujoco':
+      # enable joint visualization option:
+      scene_option = mujoco.MjvOption()
+      scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
 
-    #First State in Simulation
-    state = jit_env_reset(rng=jax.random.PRNGKey(seed=0))
-    breakpoint()
-    mj_model = env.sys
+      duration = 3.8  # (seconds)
+      framerate = 60  # (Hz)
 
-    HTML(html.render(env.sys, [state.pipeline_state]))
+      frames = []
+      mujoco.mj_resetData(env.mj_model, env.mj_data)
+      while env.mj_data.time < duration:
+        mujoco.mj_step(env.mj_model, env.mj_data)
+        if len(frames) < env.mj_data.time * framerate:
+          env.renderer.update_scene(env.mj_data, scene_option=scene_option)
+          pixels = env.renderer.render()
+          frames.append(pixels)
+
+      video(frames)
+
+    elif backend_visual == 'brax':
+        jit_env_reset = jax.jit(env.reset)
+        jit_env_step = jax.jit(env.step)
+        ctrl = -0.1 * jp.ones(len(env.sys.init_q) - 7)
+        # jit_inference_fn = jax.jit(inference_fn)
+
+        rollout = []
+        rng = jax.random.PRNGKey(seed=1)
+        state = jit_env_reset(rng=rng)
+        for _ in range(2):
+          rollout.append(state.pipeline_state)
+          state = jit_env_step(state, ctrl)
+
+
+
+        html_content = html.render(env.sys.replace(dt=env.dt), rollout)
+        encoded_html = base64.b64encode(html_content.encode()).decode()
+        data_url = f"data:text/html;base64,{encoded_html}"
+        webbrowser.open_new_tab(data_url)
