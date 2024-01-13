@@ -194,9 +194,6 @@ class Humanoid(PipelineEnv):
   table) is **not** in the range `[0.8, 2.1]` (the humanoid has fallen or is
   about to fall beyond recovery).
   """
-  # pyformat: enable
-
-
   def __init__(
       self,
       forward_reward_weight=1.25,
@@ -208,6 +205,7 @@ class Humanoid(PipelineEnv):
       exclude_current_positions_from_observation=True,
       backend='generalized',
       xml_path = None,
+      num_humanoids = 2,
       **kwargs,
   ):
     if xml_path:
@@ -226,6 +224,7 @@ class Humanoid(PipelineEnv):
     self.renderer = mujoco.Renderer(mj_model)
 
     n_frames = 5
+    self.num_humaniods = num_humanoids
 
     if backend in ['spring', 'positional']:
       sys = sys.replace(dt=0.0015)
@@ -375,7 +374,7 @@ class Humanoid(PipelineEnv):
     com = (
         jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
     )
-    return com, inertia, mass_sum, x_i  # pytype: disable=bad-return-type  # jax-ndarray
+    return com, inertia, mass_sum, x_i
 
 def run():
   pass
@@ -383,8 +382,10 @@ def run():
 if __name__ == "__main__":
 
     backend = ""
-    backend_visual = 'mujoco'
-    xml_path = "./Humanoid_MARL/assets/humanoid_1.xml"
+    backend_visual = 'brax'
+    num_robots = 2
+    xml_path = f"./Humanoid_MARL/assets/humanoid_{num_robots}.xml"
+    
     env = Humanoid(xml_path=xml_path)
 
     if backend_visual == 'mujoco':
@@ -407,9 +408,11 @@ if __name__ == "__main__":
       video(frames)
 
     elif backend_visual == 'brax':
-        jit_env_reset = jax.jit(env.reset)
-        jit_env_step = jax.jit(env.step)
-        ctrl = -0.1 * jp.ones(len(env.sys.init_q) - 7)
+        # jit_env_reset = jax.jit(env.reset)
+        jit_env_reset = env.reset
+        # jit_env_step = jax.jit(env.step)
+        jit_env_step = env.step
+        ctrl = -0.1 * jp.ones(len(env.sys.init_q) - (7 * num_robots))
         # jit_inference_fn = jax.jit(inference_fn)
 
         rollout = []
