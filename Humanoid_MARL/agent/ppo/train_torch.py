@@ -210,15 +210,19 @@ class Agent(nn.Module):
 
         return policy_loss + v_loss + entropy_loss
 
+def add_extra_dimension(data):
+    return data.unsqueeze(0)
 
-def sd_map(f: Callable[..., torch.Tensor], *sds) -> StepData:
+def sd_map(f: Callable[..., torch.Tensor], *sds, add_dim: bool = False) -> StepData:
     """Map a function over each field in StepData."""
     items = {}
     keys = sds[0]._asdict().keys()
     for k in keys:
         items[k] = f(*[sd._asdict()[k] for sd in sds])
+    if add_dim:
+        for k in keys:
+            items[k] = add_extra_dimension(items[k])
     return StepData(**items)
-
 
 def eval_unroll(agent, env, length):
     """Return number of episodes and average reward for a single unroll."""
@@ -262,11 +266,11 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
         actions.append(action)
     return torch.concatenate(logits, axis=0), torch.concatenate(actions, axis=0)
     
-def train_unroll2(agents, env, obseravtion, num_unrolls, unroll_length):
-    for _ in range(num_unrolls):
-        logits, actions = get_agent_actions(agents, obseravtion)
+# def train_unroll2(agents, env, obseravtion, num_unrolls, unroll_length):
+#     for _ in range(num_unrolls):
+#         logits, actions = get_agent_actions(agents, obseravtion)
 
-def train_unroll(agent, env, observation, num_unrolls, unroll_length):
+def train_unroll(agent, env, observation, num_unrolls, unroll_length, add_dim=True):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
     for _ in range(num_unrolls):
@@ -278,20 +282,37 @@ def train_unroll(agent, env, observation, num_unrolls, unroll_length):
             print(f"Reward {reward}")
             print(f"Info {info}")
             print("========================================================")
-    return None, None
-    #         one_unroll.observation.append(observation)
-    #         one_unroll.logits.append(logits)
-    #         one_unroll.action.append(action)
-    #         one_unroll.reward.append(reward)
-    #         one_unroll.done.append(done)
-    #         one_unroll.truncation.append(info["truncation"])
-    #     breakpoint()
-    #     one_unroll = sd_map(torch.stack, one_unroll)
-    #     sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
-    # breakpoint()
-    # td = sd_map(torch.stack, sd)
-    # return observation, td
+            one_unroll.observation.append(observation)
+            one_unroll.logits.append(logits)
+            one_unroll.action.append(action)
+            one_unroll.reward.append(reward)
+            one_unroll.done.append(done)
+            one_unroll.truncation.append(info["truncation"])
+        # breakpoint()
+        # Apply torch.stack to each field in one_unroll
+        one_unroll = sd_map(torch.stack, one_unroll)
+        # Update the overall StepData structure by concatenating data from the current unroll
+        sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
+    
+    # Apply torch.stack to each field in sd
+    td = sd_map(torch.stack, sd, add_dim=True)
 
+    return observation, td
+
+def update_normalization(agents : List[Agent], observation):
+    for agent in agents:
+        agent.update_normalization(observation)
+
+def unroll_first(data):
+    data = data.swapaxes(0, 1)
+    return data.reshape([data.shape[0], -1] + list(data.shape[3:]))
+
+# def shuffle_batch(data, permutation, num_minibatches):
+#         data = data[:, permutation]
+#         data = data.reshape(
+#             [data.shape[0], num_minibatches, -1] + list(data.shape[2:])
+#         )
+#         return data.swapaxes(0, 1)
 
 def train(
     env_name: str = "humanoids",
@@ -300,7 +321,7 @@ def train(
     device: str = "cuda",
     num_timesteps: int = 30_000_000,
     eval_frequency: int = 10,
-    unroll_length: int = 5,
+    unroll_length: int = 2,
     batch_size: int = 1024,
     num_minibatches: int = 32,
     num_update_epochs: int = 4,
@@ -367,45 +388,41 @@ def train(
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         # num_unrolls = batch_size * num_minibatches // env.num_envs
         # num_unrolls = batch_size * num_minibatches // env.num_envs
-        num_unrolls = 1024
+        num_unrolls = 2
         total_loss = 0
         t = time.time()
         for _ in range(num_epochs):
-            observation, td = train_unroll(
-                agents, env, observation, num_unrolls, unroll_length
-            )
-
-            # make unroll first
-            def unroll_first(data):
-                data = data.swapaxes(0, 1)
-                return data.reshape([data.shape[0], -1] + list(data.shape[3:]))
-
+            observation, td = train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=True)
             td = sd_map(unroll_first, td)
 
+            breakpoint()
+
             # update normalization statistics
-            agent.update_normalization(td.observation)
+            # agent.update_normalization(td.observation)
+            # update_normalization(agents, td.observation)
+            
+
 
             for _ in range(num_update_epochs):
                 # shuffle and batch the data
                 with torch.no_grad():
+                    breakpoint()
                     permutation = torch.randperm(td.observation.shape[1], device=device)
 
                     def shuffle_batch(data):
                         data = data[:, permutation]
-                        data = data.reshape(
-                            [data.shape[0], num_minibatches, -1] + list(data.shape[2:])
-                        )
+                        data = data.reshape([data.shape[0], num_minibatches, -1] + list(data.shape[2:]))
                         return data.swapaxes(0, 1)
-
+                    breakpoint()
                     epoch_td = sd_map(shuffle_batch, td)
 
-                for minibatch_i in range(num_minibatches):
-                    td_minibatch = sd_map(lambda d: d[minibatch_i], epoch_td)
-                    loss = agent.loss(td_minibatch._asdict())
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                    total_loss += loss
+                # for minibatch_i in range(num_minibatches):
+                #     td_minibatch = sd_map(lambda d: d[minibatch_i], epoch_td)
+                #     loss = agent.loss(td_minibatch._asdict())
+                #     optimizer.zero_grad()
+                #     loss.backward()
+                #     optimizer.step()
+                #     total_loss += loss
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
