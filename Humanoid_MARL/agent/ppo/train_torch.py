@@ -4,7 +4,7 @@ import functools
 import math
 import os
 import time
-from typing import Any, Callable, Dict, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Union, List, Tuple
 
 import brax
 
@@ -232,53 +232,65 @@ def eval_unroll(agent, env, length):
         episode_reward += torch.sum(reward)
     return episodes, episode_reward / episodes
 
-
 def get_obs(obs, dims, num_agents):
     total_obs = sum(dims)
     start_idx = 0
     chunks = []
-
     for dim in dims:
-        chunk_size = dim * num_agents
-        chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (num_agents, -1, dim))
-        chunks.append(chunk)
-        start_idx += chunk_size
+        if len(obs.shape) == 1:
+            chunk_size = dim * num_agents
+            chunk = torch.reshape(obs[start_idx: start_idx + chunk_size], (num_agents, dim))
+            chunks.append(chunk)
+            start_idx += chunk_size
+        elif len(obs.shape) > 1:
+            chunk_size = dim * num_agents
+            chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (num_agents, -1, dim))
+            chunks.append(chunk)
+            start_idx += chunk_size
+    if len(obs.shape) == 1:
+        return torch.concatenate(chunks, axis=1) #Assuming only 1 enviroment [obs]
+    elif len(obs.shape) >= 1:
+        return torch.concatenate(chunks, axis=2) #Parallized Enviroments [#envs, obs]
 
-    return torch.concatenate(chunks, axis=2)
-
-
-def get_agent_actions(agents, observation):
-    for agent in agents:
-        pass
-
+def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : Tuple[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    num_agents = len(agents)
+    obs = get_obs(observation, dims, num_agents) # [#num_agents, obs]
+    logits, actions = [], []
+    for idx, agent in enumerate(agents):
+        logit, action = agent.get_logits_action(obs[idx])
+        logits.append(logit)
+        actions.append(action)
+    return torch.concatenate(logits, axis=0), torch.concatenate(actions, axis=0)
+    
 def train_unroll2(agents, env, obseravtion, num_unrolls, unroll_length):
     for _ in range(num_unrolls):
         logits, actions = get_agent_actions(agents, obseravtion)
 
-
 def train_unroll(agent, env, observation, num_unrolls, unroll_length):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
-    breakpoint()
     for _ in range(num_unrolls):
-        breakpoint()
         one_unroll = StepData([observation], [], [], [], [], [])
         for _ in range(unroll_length):
-            breakpoint()
-            logits, action = agent.get_logits_action(observation)
+            logits, action = get_agent_actions(agent, observation, env.obs_dims)
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
-            one_unroll.observation.append(observation)
-            one_unroll.logits.append(logits)
-            one_unroll.action.append(action)
-            one_unroll.reward.append(reward)
-            one_unroll.done.append(done)
-            one_unroll.truncation.append(info["truncation"])
-        breakpoint()
-        one_unroll = sd_map(torch.stack, one_unroll)
-        sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
-    breakpoint()
-    td = sd_map(torch.stack, sd)
-    return observation, td
+            print("========================================================")
+            print(f"Reward {reward}")
+            print(f"Info {info}")
+            print("========================================================")
+    return None, None
+    #         one_unroll.observation.append(observation)
+    #         one_unroll.logits.append(logits)
+    #         one_unroll.action.append(action)
+    #         one_unroll.reward.append(reward)
+    #         one_unroll.done.append(done)
+    #         one_unroll.truncation.append(info["truncation"])
+    #     breakpoint()
+    #     one_unroll = sd_map(torch.stack, one_unroll)
+    #     sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
+    # breakpoint()
+    # td = sd_map(torch.stack, sd)
+    # return observation, td
 
 
 def train(
@@ -316,15 +328,14 @@ def train(
     env.step(action)
 
     # create the agent
-    policy_layers = [env.observation_space.shape[-1], 64, 64, env.action_space.shape[-1],]
+    policy_layers = [env.observation_space.shape[-1], 64, 64, env.action_space.shape[-1] * 2,]
     value_layers = [env.observation_space.shape[-1], 64, 64, 1]
-    agents = [Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device), 
-              Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device)]
+    agents = [Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device), 
+              Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device)]
     
-    # breakpoint()
-    agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
     optimizers = [optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents]
-    # breakpoint()
+
     sps = 0
     total_steps = 0
     total_loss = 0
