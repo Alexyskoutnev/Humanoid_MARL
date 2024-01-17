@@ -36,24 +36,9 @@ import matplotlib.pyplot as plt
 from IPython.display import HTML, clear_output, display
 import webbrowser
 
-
-# Create a function to update the displayed image in the animation
-def update(frame):
-    plt.imshow(frame)
-    
-def video(frames):
-    # Create a figure and axis
-    fig, ax = plt.subplots()
-
-    # Set up the animation
-    ani = animation.FuncAnimation(fig, update, frames=frames, interval=10, repeat=True)
-
-    # Display the animation
-    plt.show()
-
+from Humanoid_MARL import PACKAGE_ROOT
 
 class Humanoid(PipelineEnv):
-  # pyformat: disable
   """
   ### Description
 
@@ -206,21 +191,17 @@ class Humanoid(PipelineEnv):
       terminate_when_unhealthy=True,
       healthy_z_range=(1.0, 2.0),
       reset_noise_scale=1e-2,
-      exclude_current_positions_from_observation=True,
+      exclude_current_positions_from_observation=False, 
       backend='generalized',
       visual='brax',
-      xml_path = None,
       num_humanoids = 2,
       **kwargs,
   ):
-    if xml_path:
-      path = xml_path
-      sys = mjcf.load(path)
-    else:
-      path = epath.resource_path('brax') / 'envs/assets/humanoid.xml'
-      sys = mjcf.load(path)
+    
+    humanoid_2_path = os.path.join(PACKAGE_ROOT, 'assets', 'humanoid_2.xml')
+    sys = mjcf.load(humanoid_2_path)
 
-    with open(path, 'r') as f_path:
+    with open(humanoid_2_path, 'r') as f_path:
         xml_string  = f_path.read()
         mj_model = mujoco.MjModel.from_xml_string(xml_string)
 
@@ -231,6 +212,7 @@ class Humanoid(PipelineEnv):
 
     n_frames = 5
     self.num_humaniods = num_humanoids
+    self._dims = None
 
     if backend in ['spring', 'positional']:
       sys = sys.replace(dt=0.0015)
@@ -260,7 +242,7 @@ class Humanoid(PipelineEnv):
         exclude_current_positions_from_observation
     )
 
-  def reset(self, rng: jax.Array) -> State:
+  def reset(self, rng: jax.Array = jax.random.PRNGKey(seed=1)) -> State:
     """Resets the environment to an initial state."""
     rng, rng1, rng2 = jax.random.split(rng, 3)
 
@@ -300,10 +282,16 @@ class Humanoid(PipelineEnv):
     return ctrl_cost
   
   def done_signal(self, is_healthy):
-    if sum(is_healthy) < len(is_healthy):
-        return 1.0
+    # breakpoint()
+    val = len(is_healthy) - sum(is_healthy)
+    if jp.logical_and(0, val):
+      return 1.0
     else:
-        return 0.0
+      return 0.0
+    # if sum(is_healthy) < len(is_healthy):
+    #     return 1.0
+    # else:
+    #     return 0.0
 
   def step(self, state: State, action: jax.Array) -> State:
     """Runs one timestep of the environment's dynamics."""
@@ -316,10 +304,10 @@ class Humanoid(PipelineEnv):
     forward_reward = self._forward_reward_weight * velocity[:,0]
     
     min_z, max_z = self._healthy_z_range
-    # is_healthy = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
-    # is_healthy = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy)
+    is_healthy = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
+    is_healthy = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy)
 
-    is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
+    # is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
 
     if self._terminate_when_unhealthy:
       healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods)
@@ -330,8 +318,9 @@ class Humanoid(PipelineEnv):
     ctrl_cost = self._control_reward(action)
     obs = self._get_obs(pipeline_state, action)
     reward = forward_reward + healthy_reward - ctrl_cost
-    # done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
-    done = self.done_signal(is_healthy)
+    done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
+    # breakpoint()
+    # done = self.done_signal(is_healthy)
     
     state.metrics.update(
         forward_reward=forward_reward,
@@ -365,10 +354,15 @@ class Humanoid(PipelineEnv):
 
     com, inertia, mass_sum, x_i = self._com(pipeline_state)
 
-    com = jp.reshape(com, (self.num_humaniods, 1, -1))
-    x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3))
-    pos_replace = jp.reshape(self._flatten(x_i_pos - com), (-1, 3))
-    cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
+    if (self.num_humaniods == 1):
+      com, inertia, mass_sum, x_i = self._com(pipeline_state)
+      cinr = x_i.replace(pos=x_i.pos - com).vmap().do(inertia)
+    elif (self.num_humaniods > 1):
+      com = jp.reshape(com, (self.num_humaniods, 1, -1))
+      x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3))
+      pos_replace = jp.reshape(self._flatten(x_i_pos - com), (-1, 3))
+      cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
+      mass_sum = self._flatten(mass_sum[0]) #double check that mass_sum arent different btw the two robots
 
     com_inertia = jp.hstack([cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]])
 
@@ -378,13 +372,20 @@ class Humanoid(PipelineEnv):
         .do(pipeline_state.xd)
     )
 
-    mass_sum = self._flatten(mass_sum[0]) #double check that mass_sum arent different btw the two robots
     com_vel = inertia.mass[:, None] * xd_i.vel / mass_sum
     com_ang = xd_i.ang
     com_velocity = jp.hstack([com_vel, com_ang])
 
     qfrc_actuator = actuator.to_tau(
         self.sys, action, pipeline_state.q, pipeline_state.qd)
+
+    # Recording Dims
+    self._position_dim = int(position.shape[0] / self.num_humaniods)
+    self._velocity_dim = int(velocity.shape[0] / self.num_humaniods)
+    self._com_inertia_dim = int(com_inertia.ravel().shape[0] / self.num_humaniods)
+    self._com_velocity_dim = int(com_velocity.ravel().shape[0] / self.num_humaniods)
+    self._q_actuator_dim = int(qfrc_actuator.shape[0] / self.num_humaniods)
+    self._total_dim = self._position_dim + self._velocity_dim + self._com_inertia_dim + self._com_velocity_dim + self._q_actuator_dim 
 
     # external_contact_forces are excluded
     return jp.concatenate([
@@ -405,63 +406,42 @@ class Humanoid(PipelineEnv):
           ),
           mass=inertia.mass ** (1 - self.sys.spring_mass_scale),
       )
-    inertia_mass = jp.reshape(inertia.mass, (num_robots, -1, 1)) 
-    mass_sum = jp.sum(inertia_mass, axis=1)
-    x_i = pipeline_state.x.vmap().do(inertia.transform)
-    x_i_pos =  jp.reshape(x_i.pos, (num_robots, -1, 3)) 
-    com = (jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / jp.reshape(mass_sum, (-1, 1)))
+    if (self.num_humaniods) == 1:
+      mass_sum = jp.sum(inertia.mass)
+      x_i = pipeline_state.x.vmap().do(inertia.transform)
+      com = (
+          jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
+      )
+    else:
+      inertia_mass = jp.reshape(inertia.mass, (self.num_humaniods, -1, 1)) 
+      mass_sum = jp.sum(inertia_mass, axis=1)
+      x_i = pipeline_state.x.vmap().do(inertia.transform)
+      x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3)) 
+      com = (jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / jp.reshape(mass_sum, (-1, 1)))
     return com, inertia, mass_sum, x_i
 
-def run():
-  pass
+  @property
+  def dims(self):
+    action_dim = int(self.sys.act_size() / self.num_humaniods)
+    return (self._position_dim, self._velocity_dim, self._com_inertia_dim, \
+            self._com_velocity_dim, self._q_actuator_dim, action_dim)   
 
-if __name__ == "__main__":
+  @property
+  def obs_dims(self):
+    return self.dims[:-1]
+  
+  @property
+  def action_dim(self):
+    return self.dims[-1]
 
-    backend = ""
-    backend_visual = 'brax'
-    num_robots = 2
-    xml_path = f"./Humanoid_MARL/assets/humanoid_{num_robots}.xml"
-    
-    env = Humanoid(xml_path=xml_path)
+  @dims.setter
+  def dims(self, new_dims):
+      # Setter method allows setting a new value for dims
+      self._dims = new_dims
 
-    if backend_visual == 'mujoco':
-      # enable joint visualization option:
-      scene_option = mujoco.MjvOption()
-      scene_option.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
-
-      duration = 3.8  # (seconds)
-      framerate = 60  # (Hz)
-
-      frames = []
-      mujoco.mj_resetData(env.mj_model, env.mj_data)
-      while env.mj_data.time < duration:
-        mujoco.mj_step(env.mj_model, env.mj_data)
-        if len(frames) < env.mj_data.time * framerate:
-          env.renderer.update_scene(env.mj_data, scene_option=scene_option)
-          pixels = env.renderer.render()
-          frames.append(pixels)
-
-      video(frames)
-
-    elif backend_visual == 'brax':
-        # jit_env_reset = jax.jit(env.reset)
-        jit_env_reset = env.reset
-        # jit_env_step = jax.jit(env.step)
-        jit_env_step = env.step
-        ctrl = -0.1 * jp.ones(len(env.sys.init_q) - (7 * num_robots))
-        # jit_inference_fn = jax.jit(inference_fn)
-
-        rollout = []
-        rng = jax.random.PRNGKey(seed=1)
-        state = jit_env_reset(rng=rng)
-        for _ in range(2):
-          rollout.append(state.pipeline_state)
-          state = jit_env_step(state, ctrl)
+  @property
+  def action_space(self):
+    return 17 * self.num_humaniods
 
 
-
-        html_content = html.render(env.sys.replace(dt=env.dt), rollout)
-        encoded_html = base64.b64encode(html_content.encode()).decode()
-        data_url = f"data:text/html;base64,{encoded_html}"
-        breakpoint()
-        webbrowser.open_new_tab(data_url)
+  
