@@ -248,14 +248,14 @@ def train_unroll(agent, env, observation, num_unrolls, unroll_length):
 
 def train(
     env_name: str = "ant",
-    num_envs: int = 2048,
-    episode_length: int = 1000,
+    num_envs: int = 4,
+    episode_length: int = 10,
     device: str = "cuda",
     num_timesteps: int = 30_000_000,
     eval_frequency: int = 10,
-    unroll_length: int = 5,
-    batch_size: int = 1024,
-    num_minibatches: int = 32,
+    unroll_length: int = 2,
+    batch_size: int = 4,
+    num_minibatches: int = 2,
     num_update_epochs: int = 4,
     reward_scaling: float = 0.1,
     entropy_cost: float = 1e-2,
@@ -319,6 +319,10 @@ def train(
         num_steps = batch_size * num_minibatches * unroll_length #
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         num_unrolls = batch_size * num_minibatches // env.num_envs
+
+        num_unrolls = 2
+        unroll_length = 3
+
         total_loss = 0
         t = time.time()
         for _ in range(num_epochs):
@@ -342,7 +346,7 @@ def train(
             # Combines all the parallized envs rollouts into one big sample of 6 step rollouts
             # ========================== Important State INFO  ==========================
             td = sd_map(unroll_first, td)
-
+            breakpoint()
             # update normalization statistics
             agent.update_normalization(td.observation)
 
@@ -361,6 +365,7 @@ def train(
                         )
                         return data.swapaxes(0, 1)
                     epoch_td = sd_map(shuffle_batch, td)
+                    breakpoint()
                     # ========================== Important State INFO  ==========================
                     # epoch_td.observation.shape | [num_minibatches, unroll_length, batch_size, env.obs_dim] | torch.Size([32, 6, 1024, 244])
                     # ========================== Important State INFO  ==========================

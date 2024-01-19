@@ -256,7 +256,8 @@ class Humanoid(PipelineEnv):
 
     pipeline_state = self.pipeline_init(qpos, qvel)
     obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
-    reward, done, zero = jp.zeros(3)
+    done, zero = jp.zeros(2)
+    reward = jp.zeros(self.num_humaniods)
     metrics = {
         'forward_reward': zero,
         'reward_linvel': zero,
@@ -277,12 +278,11 @@ class Humanoid(PipelineEnv):
     return is_healthy
   
   def _control_reward(self, action):
-    action = jp.reshape(action, (self.num_humaniods, -1))
+    action = jp.reshape(action.val, (self.num_humaniods, -1))
     ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
     return ctrl_cost
   
   def done_signal(self, is_healthy):
-    # breakpoint()
     val = len(is_healthy) - sum(is_healthy)
     if jp.logical_and(0, val):
       return 1.0
@@ -315,6 +315,7 @@ class Humanoid(PipelineEnv):
       healthy_reward = self._healthy_reward * is_healthy
   
     # ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action))
+    # breakpoint()
     ctrl_cost = self._control_reward(action)
     obs = self._get_obs(pipeline_state, action)
     reward = forward_reward + healthy_reward - ctrl_cost
