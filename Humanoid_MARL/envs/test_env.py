@@ -206,7 +206,7 @@ class Humanoid(PipelineEnv):
       terminate_when_unhealthy=True,
       healthy_z_range=(1.0, 2.0),
       reset_noise_scale=1e-2,
-      exclude_current_positions_from_observation=True,
+      exclude_current_positions_from_observation=False, 
       backend='generalized',
       visual='brax',
       xml_path = None,
@@ -217,6 +217,7 @@ class Humanoid(PipelineEnv):
       path = xml_path
       sys = mjcf.load(path)
     else:
+      print("Default")
       path = epath.resource_path('brax') / 'envs/assets/humanoid.xml'
       sys = mjcf.load(path)
 
@@ -231,6 +232,7 @@ class Humanoid(PipelineEnv):
 
     n_frames = 5
     self.num_humaniods = num_humanoids
+    self._dims = None
 
     if backend in ['spring', 'positional']:
       sys = sys.replace(dt=0.0015)
@@ -260,7 +262,7 @@ class Humanoid(PipelineEnv):
         exclude_current_positions_from_observation
     )
 
-  def reset(self, rng: jax.Array) -> State:
+  def reset(self, rng: jax.Array = jax.random.PRNGKey(seed=1)) -> State:
     """Resets the environment to an initial state."""
     rng, rng1, rng2 = jax.random.split(rng, 3)
 
@@ -273,6 +275,7 @@ class Humanoid(PipelineEnv):
     )
 
     pipeline_state = self.pipeline_init(qpos, qvel)
+    breakpoint()
     obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
     reward, done, zero = jp.zeros(3)
     metrics = {
@@ -365,10 +368,15 @@ class Humanoid(PipelineEnv):
 
     com, inertia, mass_sum, x_i = self._com(pipeline_state)
 
-    com = jp.reshape(com, (self.num_humaniods, 1, -1))
-    x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3))
-    pos_replace = jp.reshape(self._flatten(x_i_pos - com), (-1, 3))
-    cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
+    if (self.num_humaniods == 1):
+      com, inertia, mass_sum, x_i = self._com(pipeline_state)
+      cinr = x_i.replace(pos=x_i.pos - com).vmap().do(inertia)
+    elif (self.num_humaniods > 1):
+      com = jp.reshape(com, (self.num_humaniods, 1, -1))
+      x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3))
+      pos_replace = jp.reshape(self._flatten(x_i_pos - com), (-1, 3))
+      cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
+      mass_sum = self._flatten(mass_sum[0]) #double check that mass_sum arent different btw the two robots
 
     com_inertia = jp.hstack([cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]])
 
@@ -378,13 +386,20 @@ class Humanoid(PipelineEnv):
         .do(pipeline_state.xd)
     )
 
-    mass_sum = self._flatten(mass_sum[0]) #double check that mass_sum arent different btw the two robots
     com_vel = inertia.mass[:, None] * xd_i.vel / mass_sum
     com_ang = xd_i.ang
     com_velocity = jp.hstack([com_vel, com_ang])
 
     qfrc_actuator = actuator.to_tau(
         self.sys, action, pipeline_state.q, pipeline_state.qd)
+
+    # Recording Dims
+    self._position_dim = int(position.shape[0] / self.num_humaniods)
+    self._velocity_dim = int(velocity.shape[0] / self.num_humaniods)
+    self._com_inertia_dim = int(com_inertia.ravel().shape[0] / self.num_humaniods)
+    self._com_velocity_dim = int(com_velocity.ravel().shape[0] / self.num_humaniods)
+    self._q_actuator_dim = int(qfrc_actuator.shape[0] / self.num_humaniods)
+    self._total_dim = self._position_dim + self._velocity_dim + self._com_inertia_dim + self._com_velocity_dim + self._q_actuator_dim 
 
     # external_contact_forces are excluded
     return jp.concatenate([
@@ -405,12 +420,30 @@ class Humanoid(PipelineEnv):
           ),
           mass=inertia.mass ** (1 - self.sys.spring_mass_scale),
       )
-    inertia_mass = jp.reshape(inertia.mass, (num_robots, -1, 1)) 
-    mass_sum = jp.sum(inertia_mass, axis=1)
-    x_i = pipeline_state.x.vmap().do(inertia.transform)
-    x_i_pos =  jp.reshape(x_i.pos, (num_robots, -1, 3)) 
-    com = (jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / jp.reshape(mass_sum, (-1, 1)))
+    if (self.num_humaniods) == 1:
+      mass_sum = jp.sum(inertia.mass)
+      x_i = pipeline_state.x.vmap().do(inertia.transform)
+      com = (
+          jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
+      )
+    else:
+      inertia_mass = jp.reshape(inertia.mass, (self.num_humaniods, -1, 1)) 
+      mass_sum = jp.sum(inertia_mass, axis=1)
+      x_i = pipeline_state.x.vmap().do(inertia.transform)
+      x_i_pos =  jp.reshape(x_i.pos, (self.num_humaniods, -1, 3)) 
+      com = (jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / jp.reshape(mass_sum, (-1, 1)))
     return com, inertia, mass_sum, x_i
+
+  @property
+  def dims(self):
+    action_dim = int(self.sys.act_size() / self.num_humaniods)
+    return (self._position_dim, self._velocity_dim, self._com_inertia_dim, \
+            self._com_velocity_dim, self._q_actuator_dim, action_dim)   
+
+  @dims.setter
+  def dims(self, new_dims):
+      # Setter method allows setting a new value for dims
+      self._dims = new_dims
 
 def run():
   pass
@@ -456,6 +489,7 @@ if __name__ == "__main__":
         state = jit_env_reset(rng=rng)
         for _ in range(2):
           rollout.append(state.pipeline_state)
+          breakpoint()
           state = jit_env_step(state, ctrl)
 
 
@@ -464,4 +498,6 @@ if __name__ == "__main__":
         encoded_html = base64.b64encode(html_content.encode()).decode()
         data_url = f"data:text/html;base64,{encoded_html}"
         breakpoint()
+
+        
         webbrowser.open_new_tab(data_url)
