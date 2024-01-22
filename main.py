@@ -1,3 +1,8 @@
+import gym.envs.mujoco.ant_v4 as ant_v4
+import custom_envs.ant_v4 as ant_v42
+
+ant_v4.AntEnv = ant_v42.AntEnv
+
 from configparser import ConfigParser
 from argparse import ArgumentParser
 
@@ -16,7 +21,7 @@ os.makedirs('./model_weights', exist_ok=True)
 
 parser = ArgumentParser('parameters')
 
-parser.add_argument("--env_name", type=str, default='Humanoid-v4', help="'Ant-v2','HalfCheetah-v2','Hopper-v2','Humanoid-v2','HumanoidStandup-v2',\
+parser.add_argument("--env_name", type=str, default='Ant-v4', help="'Ant-v2','HalfCheetah-v2','Hopper-v2','Humanoid-v2','HumanoidStandup-v2',\
           'InvertedDoublePendulum-v2', 'InvertedPendulum-v2' (default : Hopper-v2)")
 parser.add_argument("--algo", type=str, default='ppo', help='algorithm to adjust (default : ppo)')
 parser.add_argument('--train', type=bool, default=True, help="(default: True)")
@@ -93,7 +98,7 @@ import pickle
 from random import randint
 ri = lambda : float(randint(-9, 9))
 dt = env_chaser.dt * 0  # remove multiplication to enable velocity updates.
-train_chaser = False
+train_chaser = True
 train_runner = True
 def augment_state(s1, s2):
     # Augment s1 with relative position of s2
@@ -106,6 +111,13 @@ def get_init_coords():
         a, b, c, d = ri(), ri(), ri(), ri()
         if abs(a-c) + abs(b-d) < 4: continue
         return a, b, c, d
+
+def get_health_penalty(state_):
+    x, y = state_[:2]
+    z = state_[2]
+    z_penalty = 100*(z-0.6)**6
+    xy_penalty = 0.25 * ((x/10)**2 + (y/10)**2)
+    return np.clip(z_penalty + xy_penalty, 0, 0.5)
 
 if agent_args.on_policy == True:
     score_chaser = score_runner = 0.0
@@ -158,10 +170,10 @@ if agent_args.on_policy == True:
                   abs(state_chaser_[1] - state_runner_[1])
             d_2 = abs(next_state_chaser_[0] - state_runner_[0]) + \
                   abs(next_state_chaser_[1] - state_runner_[1])
-            chaser_reward = 100 * (d_1 - d_2)
+            chaser_reward = 10 * (d_1 - d_2)
             if chase_reward and not done_chaser:
                 # switch rewards to penalize being unhealthy
-                reward_chaser += np.clip(chaser_reward, 0, 3)
+                reward_chaser += np.clip(chaser_reward, 0, 1) - get_health_penalty(next_state_chaser_)
             score_chaser += reward_chaser
 
             # runner
@@ -184,9 +196,9 @@ if agent_args.on_policy == True:
                   abs(state_runner_[1] - state_chaser_[1])
             d_2 = abs(next_state_runner_[0] - state_chaser_[0]) + \
                   abs(next_state_runner_[1] - state_chaser_[1])
-            runner_reward = 100 * (d_2 - d_1)
+            runner_reward = 10 * (d_2 - d_1)
             if chase_reward and not done_runner:
-                reward_runner += np.clip(runner_reward, 0, 3)
+                reward_runner += np.clip(runner_reward, 0, 1) - get_health_penalty(next_state_runner_)
 
             next_state_runner_ = augment_state(next_state_runner_, next_state_chaser_)
             next_state_runner = np.clip((next_state_runner_ - state_rms_runner.mean) / (state_rms_runner.var ** 0.5 + 1e-8), -5, 5)
@@ -257,8 +269,8 @@ if agent_args.on_policy == True:
         # agent_chaser.train_net(n_epi)
         agent_runner.train_net(n_epi)
         # if n_epi < 20:            # disable scaler update after a fixed iteration
-        # state_rms_chaser.update(np.vstack(state_lst_chaser))
-        # state_rms_runner.update(np.vstack(state_lst_runner))
+        state_rms_chaser.update(np.vstack(state_lst_chaser))
+        state_rms_runner.update(np.vstack(state_lst_runner))
 
         if n_epi % args.print_interval == 0 and n_epi != 0:
             print("# of episode :{}, avg score chaser: {:.1f}".format(n_epi, sum(score_lst_chaser) / (len(score_lst_chaser) or 1)))

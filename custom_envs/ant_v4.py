@@ -187,7 +187,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         ctrl_cost_weight=0.5,
         use_contact_forces=False,
         contact_cost_weight=5e-4,
-        healthy_reward=1.0,
+        healthy_reward=2.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(0.2, 1.0),
         contact_force_range=(-1.0, 1.0),
@@ -295,9 +295,9 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         return terminated
 
     def step(self, action):
-        xy_position_before = self.xy_pos
+        xy_position_before = np.array(self.xy_pos)
         self.do_simulation(action, self.frame_skip)
-        xy_position_after = self.get_body_com("torso")[:2].copy()
+        xy_position_after = np.array(self.xy_pos)
 
         xy_velocity = (xy_position_after - xy_position_before) / self.dt
         x_velocity, y_velocity = xy_velocity
