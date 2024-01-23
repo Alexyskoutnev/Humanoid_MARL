@@ -25,10 +25,6 @@ import torch.nn.functional as F
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 
-#Debug Mode
-from jax import config
-config.update('jax_disable_jit', True)
-
 
 StepData = collections.namedtuple(
     "StepData", ("observation", "logits", "action", "reward", "done", "truncation")
@@ -287,7 +283,8 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
         logits.append(logit)
         actions.append(action)
     return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
-    
+
+
 def train_unroll(agent, env, observation, num_unrolls, unroll_length, add_dim=False):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
@@ -302,6 +299,11 @@ def train_unroll(agent, env, observation, num_unrolls, unroll_length, add_dim=Fa
             one_unroll.reward.append(reward)
             one_unroll.done.append(done)
             one_unroll.truncation.append(info["truncation"])
+
+            # print("====================================")
+            # print(f"Reward : {reward}")
+            # print(f"Done : {done}")
+
         # Apply torch.stack to each field in one_unroll
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
@@ -343,7 +345,6 @@ def reshape_minibatch(epoch_td : torch.Tensor, minibatch_idx : int, dims : Tuple
 def train(
     env_name: str = "humanoids",
     num_envs: Union[int, None] = 2048,
-    # episode_length: int = 10,
     episode_length: int = 1000,
     device: str = "cuda",
     num_timesteps: int = 30_000_000,
@@ -364,24 +365,21 @@ def train(
     )
     
     env = VectorGymWrapper(env)
-    # env = GymWrapper(env)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
 
     # env warmup
     obs = env.reset()
+    action = torch.zeros((env.action_space.shape[0], env.action_space.shape[1] * env.num_agents)).to(device)
+    env.step(action)
     
-    # action = torch.zeros(env.action_space.shape[0] * env.num_agents).to(device)
-    # action = torch.zeros(env.action_space.shape[0]).to(device)
-    # env.step(action)
-
     # create the agent
     policy_layers = [env.observation_space.shape[-1], 64, 64, env.action_space.shape[-1] * 2,]
     value_layers = [env.observation_space.shape[-1], 64, 64, 1]
     agents = [Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device), 
               Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device)]
     
-    # agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
+    agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
     optimizers = [optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents]
 
     sps = 0
@@ -418,12 +416,12 @@ def train(
         for _ in range(num_epochs):
             observation, td = train_unroll(agents, env, observation, num_unrolls, unroll_length)
             td = sd_map(unroll_first, td)
-
             # update normalization statistics
             update_normalization(agents, td.observation, env.obs_dims)
 
 
             for _ in range(num_update_epochs):
+                epoch_loss = 0.0
                 # shuffle and batch the data
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
@@ -443,6 +441,9 @@ def train(
                         loss.backward()
                         optimizer.step()
                         total_loss += loss
+                        epoch_loss += loss
+                # breakpoint()
+            print(f"epoch {_} : [{epoch_loss}]")
 
 
         duration = time.time() - t

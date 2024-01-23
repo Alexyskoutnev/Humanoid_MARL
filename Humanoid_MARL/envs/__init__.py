@@ -41,7 +41,7 @@ def create(
     env_name: str,
     episode_length: int = 1000,
     action_repeat: int = 1,
-    auto_reset: bool = False,
+    auto_reset: bool = True,
     batch_size: Optional[int] = None,
     **kwargs,
 ) -> Env:
