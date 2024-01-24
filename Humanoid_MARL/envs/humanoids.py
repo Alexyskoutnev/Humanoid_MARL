@@ -352,8 +352,8 @@ class Humanoid(PipelineEnv):
             x_position=com_after[:, 0],
             y_position=com_after[:, 1],
             distance_from_origin=jp.linalg.norm(com_after, axis=1),
-            x_velocity=velocity[:,0],
-            y_velocity=velocity[:,1],
+            x_velocity=velocity[:, 0],
+            y_velocity=velocity[:, 1],
         )
 
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
