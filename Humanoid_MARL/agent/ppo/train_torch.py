@@ -248,20 +248,19 @@ def eval_unroll(agents : List[Agent],
                 length : int = 1000,
                 device : str = 'cpu',
                 render : bool = False,
-                video_length : int = 200) -> Union[torch.Tensor, float]:
+                video_length : int = 100) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
     episodes = torch.zeros((), device=device)
     episode_reward = torch.zeros((), device=device)
     frames = []
     for i in range(length):
-        print(f"Eval CNT : {i}")
         logits, action = get_agent_actions(agents, observation, env.obs_dims)
         observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
         if render and i < video_length:
-            img = env.render(mode='rgb_array')
+            img = env.render(mode='rgb_array') #We have to figure why the this is so slow (slows down the RL-Pipeline)
             frames.append(img)
     try:
         save_video(frames)
@@ -476,7 +475,7 @@ if __name__ == "__main__":
     learning_rate=3e-4
     entropy_cost=1e-3
     num_envs=2048
-    batch_size=1024
+    batch_size=512
     env_name = "humanoids"
     # ================ Config ================
 

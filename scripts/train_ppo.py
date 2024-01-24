@@ -25,8 +25,8 @@ def main():
     discounting=0.97
     learning_rate=3e-4
     entropy_cost=1e-3
-    num_envs=2048
-    batch_size=512
+    num_envs=1024
+    batch_size=256
     env_name = "humanoids"
     render = True
     # ================ Config ================
