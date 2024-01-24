@@ -4,13 +4,14 @@ import functools
 from typing import Optional, Type
 
 from Humanoid_MARL.envs import test_env
-from Humanoid_MARL.envs import humanoids
+from Humanoid_MARL.envs import humanoids, humanoid
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
 
 _envs = {
     'test': test_env.Humanoid,
-    'humanoids': humanoids.Humanoid
+    'humanoids': humanoids.Humanoid,
+    'humanoid': humanoid.Humanoid,
 }
 
 
@@ -41,7 +42,7 @@ def create(
     env_name: str,
     episode_length: int = 1000,
     action_repeat: int = 1,
-    auto_reset: bool = False,
+    auto_reset: bool = True,
     batch_size: Optional[int] = None,
     **kwargs,
 ) -> Env:

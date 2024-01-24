@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 import brax
 
-from brax import envs
+from Humanoid_MARL import envs
 from brax.envs.wrappers import gym as gym_wrapper
 from brax.envs.wrappers import torch as torch_wrapper
 from brax.io import metrics
@@ -294,26 +294,26 @@ def train(
     total_steps = 0
     total_loss = 0
     for eval_i in range(eval_frequency + 1):
-        # if progress_fn:
-        #     t = time.time()
-        #     with torch.no_grad():
-        #         episode_count, episode_reward = eval_unroll(agent, env, episode_length)
-        #     duration = time.time() - t
-        #     # TODO: only count stats from completed episodes
-        #     episode_avg_length = env.num_envs * episode_length / episode_count
-        #     eval_sps = env.num_envs * episode_length / duration
-        #     progress = {
-        #         "eval/episode_reward": episode_reward,
-        #         "eval/completed_episodes": episode_count,
-        #         "eval/avg_episode_length": episode_avg_length,
-        #         "speed/sps": sps,
-        #         "speed/eval_sps": eval_sps,
-        #         "losses/total_loss": total_loss,
-        #     }
-        #     progress_fn(total_steps, progress)
+        if progress_fn:
+            t = time.time()
+            with torch.no_grad():
+                episode_count, episode_reward = eval_unroll(agent, env, episode_length)
+            duration = time.time() - t
+            # TODO: only count stats from completed episodes
+            episode_avg_length = env.num_envs * episode_length / episode_count
+            eval_sps = env.num_envs * episode_length / duration
+            progress = {
+                "eval/episode_reward": episode_reward,
+                "eval/completed_episodes": episode_count,
+                "eval/avg_episode_length": episode_avg_length,
+                "speed/sps": sps,
+                "speed/eval_sps": eval_sps,
+                "losses/total_loss": total_loss,
+            }
+            progress_fn(total_steps, progress)
 
-        # if eval_i == eval_frequency:
-        #     break
+        if eval_i == eval_frequency:
+            break
 
         observation = env.reset()
         num_steps = batch_size * num_minibatches * unroll_length #
@@ -346,7 +346,6 @@ def train(
             # Combines all the parallized envs rollouts into one big sample of 6 step rollouts
             # ========================== Important State INFO  ==========================
             td = sd_map(unroll_first, td)
-            breakpoint()
             # update normalization statistics
             agent.update_normalization(td.observation)
 
@@ -365,7 +364,6 @@ def train(
                         )
                         return data.swapaxes(0, 1)
                     epoch_td = sd_map(shuffle_batch, td)
-                    breakpoint()
                     # ========================== Important State INFO  ==========================
                     # epoch_td.observation.shape | [num_minibatches, unroll_length, batch_size, env.obs_dim] | torch.Size([32, 6, 1024, 244])
                     # ========================== Important State INFO  ==========================

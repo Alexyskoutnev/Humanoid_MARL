@@ -127,6 +127,7 @@ class VectorGymWrapper(gym.vector.VectorEnv):
     action = jax.tree_map(np.array, self._env.sys.actuator.ctrl_range)
     self.num_actuators = len(self._env.sys.actuator.ctrl_range) // self.num_agents
     action_space = spaces.Box(action[:, 0][:self.num_actuators], action[:, 1][:self.num_actuators], dtype='float32')
+    # action_space = spaces.Box(action[:, 0], action[:, 1], dtype='float32')
     self.action_space = utils.batch_space(action_space, self.num_envs)
     self.action_dim = env.action_dim
 
