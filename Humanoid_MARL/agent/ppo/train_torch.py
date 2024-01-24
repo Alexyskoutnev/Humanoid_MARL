@@ -24,6 +24,7 @@ import torch.nn.functional as F
 # Humandoid MARL
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
+from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 
 
 StepData = collections.namedtuple(
@@ -245,16 +246,27 @@ def sd_map_minibatch(f: Callable[..., torch.Tensor], *sds, **kwargs) -> StepData
 def eval_unroll(agents : List[Agent],
                 env : Union[VectorGymWrapper, GymWrapper],
                 length : int = 1000,
-                device : str = 'cpu') -> Union[torch.Tensor, float]:
+                device : str = 'cpu',
+                render : bool = False,
+                video_length : int = 200) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
     episodes = torch.zeros((), device=device)
     episode_reward = torch.zeros((), device=device)
-    for _ in range(length):
+    frames = []
+    for i in range(length):
+        print(f"Eval CNT : {i}")
         logits, action = get_agent_actions(agents, observation, env.obs_dims)
         observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
+        if render and i < video_length:
+            img = env.render(mode='rgb_array')
+            frames.append(img)
+    try:
+        save_video(frames)
+    except:
+        print("Failed to save video")
     return episodes, episode_reward / episodes
 
 def get_obs(obs, dims, num_agents):
@@ -354,6 +366,7 @@ def train(
     entropy_cost: float = 1e-2,
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
+    render : bool = False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ):
     """Trains a policy via PPO."""
@@ -387,7 +400,7 @@ def train(
         if progress_fn:
             t = time.time()
             with torch.no_grad():
-                episode_count, episode_reward = eval_unroll(agents, env, episode_length, device)
+                episode_count, episode_reward = eval_unroll(agents, env, episode_length, device, render=render)
             duration = time.time() - t
             episode_avg_length = env.num_envs * episode_length / episode_count
             eval_sps = env.num_envs * episode_length / duration
@@ -410,14 +423,14 @@ def train(
         num_unrolls = batch_size * num_minibatches // env.num_envs
         total_loss = 0
         t = time.time()
-        for epoch in range(num_epochs):
+        for num_epoch in range(num_epochs):
             observation, td = train_unroll(agents, env, observation, num_unrolls, unroll_length)
             td = sd_map(unroll_first, td)
             # update normalization statistics
             update_normalization(agents, td.observation, env.obs_dims)
 
 
-            for epoch in range(num_update_epochs):
+            for update_epoch in range(num_update_epochs):
                 epoch_loss = 0.0
                 # shuffle and batch the data
                 with torch.no_grad():
@@ -440,7 +453,7 @@ def train(
                         total_loss += loss
                         epoch_loss += loss
 
-            print(f"epoch {epoch} : [{epoch_loss}]")
+            print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 
         duration = time.time() - t

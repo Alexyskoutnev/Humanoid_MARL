@@ -23,6 +23,13 @@ from gym.vector import utils
 import jax
 import numpy as np
 
+import jax
+from jax import numpy as jp
+from jax import vmap
+from jax.tree_util import tree_map
+
+def take(input, i, axis=0): #Brax version of .take() doesn't work
+    return tree_map(lambda x: jp.take(x, i, axis=axis, mode='wrap'), input)
 
 class GymWrapper(gym.Env):
   """A wrapper that converts Brax Env to one that follows Gym API."""
@@ -54,8 +61,6 @@ class GymWrapper(gym.Env):
     self.action_space = spaces.Box(action[:, 0][:self.num_actuators], action[:, 1][:self.num_actuators], dtype='float32')
     self.action_dim = env.action_dim
 
-
-
     def reset(key):
       key1, key2 = jax.random.split(key)
       state = self._env.reset(key2)
@@ -83,15 +88,14 @@ class GymWrapper(gym.Env):
   def seed(self, seed: int = 0):
     self._key = jax.random.PRNGKey(seed)
 
-  def render(self, mode='human'):
+  def render(self, mode='rgb_array'):
     if mode == 'rgb_array':
       sys, state = self._env.sys, self._state
       if state is None:
         raise RuntimeError('must call reset or step before rendering')
-      return image.render_array(sys, state.pipeline_state, 256, 256)
+      return image.render_array(sys, state.pipeline_state, 512, 512)
     else:
       return super().render(mode=mode)  # just raise an exception
-
 
 class VectorGymWrapper(gym.vector.VectorEnv):
   """A wrapper that converts batched Brax Env to one that follows Gym VectorEnv API."""
@@ -156,11 +160,11 @@ class VectorGymWrapper(gym.vector.VectorEnv):
   def seed(self, seed: int = 0):
     self._key = jax.random.PRNGKey(seed)
 
-  def render(self, mode='human'):
+  def render(self, mode='rgb_array'):
     if mode == 'rgb_array':
       sys, state = self._env.sys, self._state
       if state is None:
         raise RuntimeError('must call reset or step before rendering')
-      return image.render_array(sys, state.pipeline_state.take(0), 256, 256)
+      return image.render_array(sys, take(state.pipeline_state, 0), 512, 512)
     else:
       return super().render(mode=mode)  # just raise an exception

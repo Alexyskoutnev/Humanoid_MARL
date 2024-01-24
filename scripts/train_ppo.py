@@ -26,8 +26,9 @@ def main():
     learning_rate=3e-4
     entropy_cost=1e-3
     num_envs=2048
-    batch_size=1024
+    batch_size=512
     env_name = "humanoids"
+    render = True
     # ================ Config ================
 
     # ================ Progress Function ================
@@ -62,7 +63,8 @@ def main():
           discounting=discounting,
           learning_rate=learning_rate,
           entropy_cost=entropy_cost,
-          progress_fn=progress
+          progress_fn=progress,
+          render=render
         )
     
     print(f"time to jit: {times[1] - times[0]}")
