@@ -283,27 +283,30 @@ class Humanoid(PipelineEnv):
 
         pipeline_state = self.pipeline_init(qpos, qvel)
         obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
-        done, zero = jp.zeros(2)
-        zero = jp.zeros(1) # Put in info once whole RL pipe works
+        done, _ = jp.zeros(2)
+        zero_init = jp.zeros(2)
         reward = jp.zeros(self.num_humaniods)
         metrics = {
-            "forward_reward": zero,
-            "reward_linvel": zero,
-            "reward_quadctrl": zero,
-            "reward_alive": zero,
-            "x_position": zero,
-            "y_position": zero,
-            "distance_from_origin": zero,
-            "x_velocity": zero,
-            "y_velocity": zero,
+            "forward_reward": zero_init,
+            "reward_linvel": zero_init,
+            "reward_quadctrl": zero_init,
+            "reward_alive": zero_init,
+            "x_position": zero_init,
+            "y_position": zero_init,
+            "distance_from_origin": zero_init,
+            "x_velocity": zero_init,
+            "y_velocity": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
     def _check_is_healthy(self, pipeline_state, min_z, max_z):
-        x_pos = jp.reshape(pipeline_state.x.pos, (self.num_humaniods, -1))
-        is_healthy = jp.where(x_pos[:, 2] < min_z, 0.0, 1.0)
-        is_healthy = jp.where(x_pos[:, 2] > max_z, 0.0, is_healthy)
-        return is_healthy
+        is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
+        is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy_1)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
+        is_healthy_1_test = is_healthy_1.astype(jp.int32)
+        is_healthy_2_test = is_healthy_2.astype(jp.int32)
+        return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
 
     def _control_reward(self, action):
         action = reshape_vector(action, (self.num_humaniods, action.shape[0] // self.num_humaniods),)
@@ -316,7 +319,7 @@ class Humanoid(PipelineEnv):
             return 1.0
         else:
             return 0.0
-
+        
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -328,10 +331,7 @@ class Humanoid(PipelineEnv):
         forward_reward = self._forward_reward_weight * velocity[:, 0]
 
         min_z, max_z = self._healthy_z_range
-        is_healthy = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
-        is_healthy = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy)
-
-        # is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
+        is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
 
         if self._terminate_when_unhealthy:
             healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods)
@@ -344,21 +344,18 @@ class Humanoid(PipelineEnv):
         reward = forward_reward + healthy_reward - ctrl_cost
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
 
-        # done = self.done_signal(is_healthy)
-        
-        zero = jp.zeros(1)
-
         state.metrics.update(
-            forward_reward=zero,
-            reward_linvel=zero,
-            reward_quadctrl=-zero,
-            reward_alive=zero,
-            x_position=zero,
-            y_position=zero,
-            distance_from_origin=zero,
-            x_velocity=zero,
-            y_velocity=zero,
+            forward_reward=forward_reward,
+            reward_linvel=forward_reward,
+            reward_quadctrl=-ctrl_cost,
+            reward_alive=healthy_reward,
+            x_position=com_after[:, 0],
+            y_position=com_after[:, 1],
+            distance_from_origin=jp.linalg.norm(com_after, axis=1),
+            x_velocity=velocity[:,0],
+            y_velocity=velocity[:,1],
         )
+
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
 
     def _flatten(self, x):

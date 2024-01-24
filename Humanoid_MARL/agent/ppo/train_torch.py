@@ -386,6 +386,7 @@ def train(
     total_steps = 0
     total_loss = 0
     for eval_i in range(eval_frequency + 1):
+
         # if progress_fn:
         #     t = time.time()
         #     with torch.no_grad():
@@ -420,7 +421,7 @@ def train(
             update_normalization(agents, td.observation, env.obs_dims)
 
 
-            for _ in range(num_update_epochs):
+            for epoch in range(num_update_epochs):
                 epoch_loss = 0.0
                 # shuffle and batch the data
                 with torch.no_grad():
@@ -442,8 +443,8 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-                # breakpoint()
-            print(f"epoch {_} : [{epoch_loss}]")
+
+            print(f"epoch {epoch} : [{epoch_loss}]")
 
 
         duration = time.time() - t
@@ -453,5 +454,31 @@ def train(
 
 
 if __name__ == "__main__":
+    # ================ Config ================
+    num_timesteps=50_000_000
+    num_evals=10
+    episode_length=1000
+    normalize_observations=True
+    action_repeat=1
+    unroll_length=10
+    num_minibatches=32
+    num_updates_per_batch=8
+    discounting=0.97
+    learning_rate=3e-4
+    entropy_cost=1e-3
+    num_envs=2044
+    batch_size=1024
     env_name = "humanoids"
-    train(env_name)
+    # ================ Config ================
+    train(env_name=env_name,
+          num_envs=num_envs,
+          episode_length=episode_length,
+          num_timesteps=num_timesteps,
+          unroll_length=unroll_length,
+          batch_size=batch_size,
+          num_minibatches=num_minibatches,
+          num_update_epochs=num_updates_per_batch,
+          discounting=discounting,
+          learning_rate=learning_rate,
+          entropy_cost=entropy_cost,
+        )
