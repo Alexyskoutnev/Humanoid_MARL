@@ -42,42 +42,7 @@ def save_video(frames: List[np.array],
         video_writer.write(frame)
 
     video_writer.release()
-
-# def save_video(rgb_array: List[np.array],
-#                path: str = "data/ppo",
-#                name: str = "ppo_train_video.mp4"):
-#     """
-#     Save a sequence of RGB frames as a video.
-
-#     Parameters:
-#     - rgb_array: List of NumPy arrays representing RGB frames. Each array should have shape (height, width, 3).
-#     - path: Path to the directory where the video will be saved.
-#     - name: Name of the video file.
-#     """
-#     if not rgb_array:
-#         raise ValueError("Input list should contain at least one RGB frame.")
-
-#     fig, ax = plt.subplots()
-#     ax.axis('off')
-
-#     def update(frame):
-#         ax.imshow(frame)
-
-#     ani = FuncAnimation(fig, update, frames=rgb_array, interval=100, repeat=False)
-
-#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#     timestamped_name = f"{timestamp}_{name}"
-
-#     if path:
-#         SAVE_PATH = os.path.join(ROOT, path, timestamped_name)
-#     else:
-#         SAVE_PATH = os.path.join("../", PACKAGE_ROOT, path)
-
-#     # ani.save(SAVE_PATH, writer='ffmpeg', fps=30)
-#     breakpoint()
-#     ani.save(SAVE_PATH, writer='ffmpeg', fps=30, codec='libx264')
-#     plt.close(fig)
-
+    
 def save_rgb_image(rgb_array : np.array,
                     path : str = "data/ppo",
                     name : str = "ppo_train_img.png") -> None:
