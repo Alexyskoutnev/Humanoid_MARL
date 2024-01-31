@@ -12,3 +12,9 @@ This Bash script sets up RL experiment logs and executes a Python script to star
 ```bash
 ./scripts/run_experiment.sh num=5
 ```
+
+- Run main Bash script
+- Type 'y' to accept clear logs and previous running experiments
+```bash
+./scripts/run.sh
+```

@@ -14,12 +14,12 @@ def save_models(agents, network_arch, type="ppo"):
     torch.save(state_dicts, filename)
     print(f"Agents saved to {filename}")
 
-def load_models(filename, agent_class):
+def load_models(filename, agent_class, device: str = 'cpu'):
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
     agents = []
     for i in range(len(state_dicts) - 1):  # Subtract 1 to exclude the network_arch entry
-        agent = agent_class(**network_arch)
+        agent = agent_class(**network_arch).to(device)
         agent.load_state_dict(state_dicts[f'agent_{i}'])
         agents.append(agent)
 

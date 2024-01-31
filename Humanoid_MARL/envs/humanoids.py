@@ -196,7 +196,7 @@ class Humanoid(PipelineEnv):
         ctrl_cost_weight=0.1,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
-        healthy_z_range=(1.0, 2.0),
+        healthy_z_range=(0.5, 2.0),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=False,
         backend="generalized",

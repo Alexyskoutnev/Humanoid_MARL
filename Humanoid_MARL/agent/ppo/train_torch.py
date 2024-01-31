@@ -31,7 +31,6 @@ StepData = collections.namedtuple(
     "StepData", ("observation", "logits", "action", "reward", "done", "truncation")
 )
 
-
 class Agent(nn.Module):
     """Standard PPO Agent with GAE and observation normalization."""
 
@@ -260,7 +259,8 @@ def eval_unroll(agents : List[Agent],
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
         if render and i < video_length:
-            print(f"Img cnt : {i}")
+            breakpoint()
+            print(f"image count | {i} / {video_length}")
             img = env.render() #We have to figure why the this is so slow (slows down the RL-Pipeline)
             frames.append(img)
     try:
@@ -294,10 +294,19 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
     obs = get_obs(observation, dims, num_agents) # [#num_agents, obs]
     logits, actions = [], []
     for idx, agent in enumerate(agents):
-        logit, action = agent.get_logits_action(obs[:,idx,:])
+        if len(obs) == 2:
+            logit, action = agent.get_logits_action(obs[idx,:])
+        elif len(obs) ==3:
+            logit, action = agent.get_logits_action(obs[:,idx,:])
         logits.append(logit)
         actions.append(action)
-    return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
+    if len(obs) == 2:
+        return torch.concatenate(logits, axis=0), torch.concatenate(actions, axis=0)
+    elif len(obs) == 3:
+        return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
+    else:
+        print(f"ERROR in getting agent action {actions}")
+        
 
 def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=False):
     """Return step data over multple unrolls."""

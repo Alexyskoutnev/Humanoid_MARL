@@ -17,8 +17,8 @@ def main():
         'num_minibatches': 32,
         'num_update_epochs': 8,
         'discounting': 0.97,
-        'learning_rate': 3e-4,
-        'entropy_cost': 1e-3,
+        'learning_rate': 3e-3,
+        'entropy_cost': 1e-2,
         'num_envs': 2048,
         'batch_size': 512,
         'env_name': "humanoids",
@@ -62,6 +62,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
