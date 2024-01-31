@@ -10,8 +10,7 @@ from Humanoid_MARL.agent.ppo.train_torch import train
 def main():
     # ================ Config ================
     config = {
-        # 'num_timesteps': 1_000_000,
-        'num_timesteps': 100,
+        'num_timesteps': 100_000_000,
         'eval_frequency': 10,
         'episode_length': 1000,
         'unroll_length': 10,
@@ -23,9 +22,9 @@ def main():
         'num_envs': 2048,
         'batch_size': 512,
         'env_name': "humanoids",
-        'render' : True,
+        'render' : False,
         'device' : 'cuda',
-        'debug' : True
+        'debug' : False
     }
     # ================ Config ================
     # ================ Logging ===============
