@@ -247,7 +247,9 @@ def eval_unroll(agents : List[Agent],
                 length : int = 1000,
                 device : str = 'cpu',
                 render : bool = False,
-                video_length : int = 100) -> Union[torch.Tensor, float]:
+                video_length : int = 100,
+                get_jax_state : bool = True,
+                ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
     episodes = torch.zeros((), device=device)
@@ -255,11 +257,13 @@ def eval_unroll(agents : List[Agent],
     frames = []
     for i in range(length):
         logits, action = get_agent_actions(agents, observation, env.obs_dims)
-        observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
+        if get_jax_state:
+            jax_state, observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
+        else:
+            observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
         if render and i < video_length:
-            breakpoint()
             print(f"image count | {i} / {video_length}")
             img = env.render() #We have to figure why the this is so slow (slows down the RL-Pipeline)
             frames.append(img)
@@ -267,7 +271,11 @@ def eval_unroll(agents : List[Agent],
         save_video(frames)
     except:
         print("Failed to save video")
-    return episodes, episode_reward / episodes
+    if jax_state:
+        return episodes, episode_reward / episodes, jax_state
+    else:
+        return episodes, episode_reward / episodes
+        
 
 def get_obs(obs, dims, num_agents):
     total_obs = sum(dims)
@@ -403,7 +411,6 @@ def train(
                     "reward_scaling": reward_scaling,
                     "device": device}
     agents = [Agent(**network_arch).to(device), Agent(**network_arch).to(device)]
-    save_models(agents, network_arch)
     if not debug:
         agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
     else:

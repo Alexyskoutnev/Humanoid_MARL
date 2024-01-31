@@ -41,8 +41,10 @@ class GymWrapper(gym.Env):
     # `_reset` as signs of a deprecated gym Env API.
     _gym_disable_underscore_compat: ClassVar[bool] = True
 
-    def __init__(self, env: PipelineEnv, seed: int = 0, backend: Optional[str] = None):
+    def __init__(self, env: PipelineEnv, seed: int = 0, backend: Optional[str] = None,
+                get_jax_state : bool = True):
         self._env = env
+        self.get_jax_state = get_jax_state
         self.num_agents = env.num_humaniods
         self.metadata = {
             "render.modes": ["human", "rgb_array"],
@@ -88,7 +90,8 @@ class GymWrapper(gym.Env):
 
     def step(self, action):
         self._state, obs, reward, done, info = self._step(self._state, action)
-        # We return device arrays for pytorch users.
+        if self.get_jax_state:
+            return self._state, obs, reward, done, info
         return obs, reward, done, info
 
     def seed(self, seed: int = 0):
@@ -171,9 +174,12 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         self._state, obs, self._key = self._reset(self._key)
         return obs
 
-    def step(self, action):
+    def step(self, action, get_jax_state=False):
         self._state, obs, reward, done, info = self._step(self._state, action)
-        return obs, reward, done, info
+        if not get_jax_state:
+            return obs, reward, done, info
+        else:
+            return self._state, obs, reward, done, info
 
     def seed(self, seed: int = 0):
         self._key = jax.random.PRNGKey(seed)

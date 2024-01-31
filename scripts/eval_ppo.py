@@ -6,21 +6,26 @@ from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.agent.ppo.train_torch import Agent, eval_unroll
-from brax.envs.wrappers import torch as torch_wrapper
+# from brax.envs.wrappers import torch as torch_wrapper
+from Humanoid_MARL.envs.torch_wrapper import TorchWrapper
 
 def main(config):
     env = envs.create(
         config['env_name'], batch_size=None, episode_length=config['episode_length'], backend="generalized"
     )
-    env = GymWrapper(env)
-    env = torch_wrapper.TorchWrapper(env, device=config['device'])
+    env = GymWrapper(env, get_jax_state=True)
+    env = TorchWrapper(env, device=config['device'])
 
     # env warmup
     obs = env.reset()
     action = torch.zeros(env.action_space.shape[0] * env.num_agents).to(config['device'])
     env.step(action)
     agents = load_models(config['model_path'], Agent, device=config['device'])
-    _, eval_rewards = eval_unroll(agents, env, video_length=config['video_length'], render=config['render'], device=config['device'])
+    _, eval_rewards = eval_unroll(agents, env, 
+                                  video_length=config['video_length'],
+                                render=config['render'], 
+                                device=config['device'],
+                                get_jax_state=True)
     print(f"eval reward: {eval_rewards:.2f}")
 
 if __name__ == "__main__":
