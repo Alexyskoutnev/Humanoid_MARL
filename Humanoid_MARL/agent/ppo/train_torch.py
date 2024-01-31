@@ -4,12 +4,11 @@ import functools
 import math
 import os
 import time
+import wandb
 from typing import Any, Callable, Dict, Optional, Sequence, Union, List, Tuple
 
 import brax
 
-# from brax import envs
-# from brax.envs.wrappers import gym as gym_wrapper
 from brax.envs.wrappers import torch as torch_wrapper
 from brax.io import metrics
 from brax.training.agents.ppo import train as ppo
@@ -411,6 +410,10 @@ def train(
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
             }
+            wandb.log({"eval/episode_reward" : episode_reward,
+                       "speed/sps": sps,
+                       "speed/eval_sps": eval_sps,
+                       "losses/total_loss": total_loss})
             progress_fn(total_steps, progress)
 
         if eval_i == eval_frequency:
@@ -451,7 +454,7 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-
+            wandb.log({"training-epoch-loss": epoch_loss})
             print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 
@@ -459,63 +462,3 @@ def train(
         total_steps += num_epochs * num_steps
         total_loss = total_loss / (num_epochs * num_update_epochs * num_minibatches)
         sps = num_epochs * num_steps / duration
-
-
-if __name__ == "__main__":
-    # ================ Config ================
-    num_timesteps=50_000_000
-    num_evals=10
-    episode_length=1000
-    normalize_observations=True
-    action_repeat=1
-    unroll_length=10
-    num_minibatches=32
-    num_updates_per_batch=8
-    discounting=0.97
-    learning_rate=3e-4
-    entropy_cost=1e-3
-    num_envs=2048
-    batch_size=512
-    env_name = "humanoids"
-    # ================ Config ================
-
-    # ================ Progress Function ================
-    xdata = []
-    ydata = []
-    eval_sps = []
-    train_sps = []
-    times = [datetime.now()]
-
-    def progress(num_steps, metrics, path="./data/ppo", name="ppo_training_plot.png"):
-        times.append(datetime.now())
-        xdata.append(num_steps)
-        ydata.append(metrics["eval/episode_reward"].cpu())
-        eval_sps.append(metrics["speed/eval_sps"])
-        train_sps.append(metrics["speed/sps"])
-        plt.xlim([0, num_timesteps])
-        plt.ylim([0, 6000])
-        plt.xlabel("# environment steps")
-        plt.ylabel("reward per episode")
-        plt.plot(xdata, ydata)
-        PLT_SAVE_PATH = os.path.join(path, name)
-        plt.savefig(PLT_SAVE_PATH)
-    # ================ Progress Function ================
-    train(env_name=env_name,
-          num_envs=num_envs,
-          episode_length=episode_length,
-          num_timesteps=num_timesteps,
-          unroll_length=unroll_length,
-          batch_size=batch_size,
-          num_minibatches=num_minibatches,
-          num_update_epochs=num_updates_per_batch,
-          discounting=discounting,
-          learning_rate=learning_rate,
-          entropy_cost=entropy_cost,
-          progress_fn=progress
-        )
-    
-    print(f"time to jit: {times[1] - times[0]}")
-    print(f"time to train: {times[-1] - times[1]}")
-    print(f"eval steps/sec: {np.mean(eval_sps)}")
-    print(f"train steps/sec: {np.mean(train_sps)}")
-

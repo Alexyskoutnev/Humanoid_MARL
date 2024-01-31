@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import numpy as np
+import wandb
 
 #Visuals
 import mediapy as media
@@ -14,23 +15,26 @@ from Humanoid_MARL.agent.ppo.train_torch import train
 
 def main():
     # ================ Config ================
-    num_timesteps=50_000_000
-    num_evals=10
-    episode_length=1000
-    normalize_observations=True
-    action_repeat=1
-    unroll_length=10
-    num_minibatches=32
-    num_updates_per_batch=8
-    discounting=0.97
-    learning_rate=3e-4
-    entropy_cost=1e-3
-    num_envs=1024
-    batch_size=256
-    env_name = "humanoids"
-    render = True
+    config = {
+        'num_timesteps': 100_000_000,
+        'eval_frequency': 10,
+        'episode_length': 1000,
+        'unroll_length': 10,
+        'num_minibatches': 32,
+        'num_update_epochs': 8,
+        'discounting': 0.97,
+        'learning_rate': 3e-4,
+        'entropy_cost': 1e-3,
+        'num_envs': 2048,
+        'batch_size': 512,
+        'env_name': "humanoids",
+        'render' : True,
+        'device' : 'cuda',
+    }
     # ================ Config ================
-
+    # ================ Logging ===============
+    wandb.init(project="MARL-Humanoid",
+                    config=config)
     # ================ Progress Function ================
     xdata = []
     ydata = []
@@ -44,7 +48,7 @@ def main():
         ydata.append(metrics["eval/episode_reward"].cpu())
         eval_sps.append(metrics["speed/eval_sps"])
         train_sps.append(metrics["speed/sps"])
-        plt.xlim([0, num_timesteps])
+        plt.xlim([0, config['num_timesteps']])
         plt.ylim([0, 6000])
         plt.xlabel("# environment steps")
         plt.ylabel("reward per episode")
@@ -52,21 +56,7 @@ def main():
         PLT_SAVE_PATH = os.path.join(path, name)
         plt.savefig(PLT_SAVE_PATH)
     # ================ Progress Function ================
-    train(env_name=env_name,
-          num_envs=num_envs,
-          episode_length=episode_length,
-          num_timesteps=num_timesteps,
-          unroll_length=unroll_length,
-          batch_size=batch_size,
-          num_minibatches=num_minibatches,
-          num_update_epochs=num_updates_per_batch,
-          discounting=discounting,
-          learning_rate=learning_rate,
-          entropy_cost=entropy_cost,
-          progress_fn=progress,
-          render=render
-        )
-    
+    train(**config, progress_fn=progress)
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
     print(f"eval steps/sec: {np.mean(eval_sps)}")
