@@ -6,7 +6,6 @@ from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.agent.ppo.train_torch import Agent, eval_unroll
-# from brax.envs.wrappers import torch as torch_wrapper
 from Humanoid_MARL.envs.torch_wrapper import TorchWrapper
 
 def main(config):

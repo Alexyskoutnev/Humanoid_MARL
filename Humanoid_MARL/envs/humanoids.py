@@ -192,12 +192,12 @@ class Humanoid(PipelineEnv):
 
     def __init__(
         self,
-        forward_reward_weight=1.25,
+        forward_reward_weight=5.25,
         ctrl_cost_weight=0.1,
-        healthy_reward=5.0,
+        healthy_reward=2.5,
         terminate_when_unhealthy=True,
-        healthy_z_range=(0.5, 2.0),
-        reset_noise_scale=1e-2,
+        healthy_z_range=(1.0, 2.5),
+        reset_noise_scale=1e-1,
         exclude_current_positions_from_observation=False,
         backend="generalized",
         visual="brax",

@@ -11,13 +11,13 @@ def main():
     # ================ Config ================
     config = {
         'num_timesteps': 100_000_000,
-        'eval_frequency': 10,
+        'eval_frequency': 20,
         'episode_length': 1000,
         'unroll_length': 10,
         'num_minibatches': 32,
-        'num_update_epochs': 8,
+        'num_update_epochs': 4,
         'discounting': 0.97,
-        'learning_rate': 3e-3,
+        'learning_rate': 5e-3,
         'entropy_cost': 1e-2,
         'num_envs': 2048,
         'batch_size': 512,

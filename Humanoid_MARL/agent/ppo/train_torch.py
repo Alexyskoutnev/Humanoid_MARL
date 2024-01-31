@@ -248,7 +248,7 @@ def eval_unroll(agents : List[Agent],
                 device : str = 'cpu',
                 render : bool = False,
                 video_length : int = 100,
-                get_jax_state : bool = True,
+                get_jax_state : bool = False,
                 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
@@ -267,11 +267,12 @@ def eval_unroll(agents : List[Agent],
             print(f"image count | {i} / {video_length}")
             img = env.render() #We have to figure why the this is so slow (slows down the RL-Pipeline)
             frames.append(img)
-    try:
-        save_video(frames)
-    except:
-        print("Failed to save video")
-    if jax_state:
+    if render:
+        try:
+            save_video(frames)
+        except:
+            print("Failed to save video")
+    if get_jax_state:
         return episodes, episode_reward / episodes, jax_state
     else:
         return episodes, episode_reward / episodes
@@ -304,17 +305,14 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
     for idx, agent in enumerate(agents):
         if len(obs) == 2:
             logit, action = agent.get_logits_action(obs[idx,:])
-        elif len(obs) ==3:
+        else:
             logit, action = agent.get_logits_action(obs[:,idx,:])
         logits.append(logit)
         actions.append(action)
     if len(obs) == 2:
         return torch.concatenate(logits, axis=0), torch.concatenate(actions, axis=0)
-    elif len(obs) == 3:
-        return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
     else:
-        print(f"ERROR in getting agent action {actions}")
-        
+        return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
 def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=False):
     """Return step data over multple unrolls."""
@@ -330,10 +328,28 @@ def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=F
             one_unroll.reward.append(reward)
             one_unroll.done.append(done)
             one_unroll.truncation.append(info["truncation"])
+            rewards = (torch.sum(reward, dim=0) / reward.shape[0])
         # Apply torch.stack to each field in one_unroll
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
         sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
+        wandb.log({"forward_reward_h1" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[0].item(),
+                   "forward_reward_h2" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[1].item(),
+                   "reward_linvel_h1" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[0].item(),
+                   "reward_linvel_h2" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[1].item(),
+                   "reward_quadctrl_h1" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[0].item(),
+                   "reward_quadctrl_h2" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[1].item(),
+                   "reward_alive_h1" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[0].item(),
+                   "reward_alive_h2" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[1].item(),
+                   "x_position_h1" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[0].item(),
+                   "x_position_h2" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[1].item(),
+                   "y_position_h1" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[0].item(),
+                   "y_position_h2" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[1].item(),
+                   "distance_from_origin_h1" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[0].item(),
+                   "distance_from_origin_h2" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[1].item(),
+                   "training_reward_h1" : rewards[0].cpu().item(),
+                   "training_reward_h2" : rewards[1].cpu().item(),
+                   })
     # Apply torch.stack to each field in sd
     td = sd_map(torch.stack, sd, add_dim=add_dim)
     return observation, td
