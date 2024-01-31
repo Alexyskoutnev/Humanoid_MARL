@@ -24,6 +24,7 @@ import torch.nn.functional as F
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.visual import save_video, save_rgb_image
+from Humanoid_MARL.utils.torch_utils import save_models, load_models
 
 
 StepData = collections.namedtuple(
@@ -259,7 +260,8 @@ def eval_unroll(agents : List[Agent],
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
         if render and i < video_length:
-            img = env.render(mode='rgb_array') #We have to figure why the this is so slow (slows down the RL-Pipeline)
+            print(f"Img cnt : {i}")
+            img = env.render() #We have to figure why the this is so slow (slows down the RL-Pipeline)
             frames.append(img)
     try:
         save_video(frames)
@@ -365,6 +367,7 @@ def train(
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
     render : bool = False,
+    debug : bool = False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ):
     """Trains a policy via PPO."""
@@ -384,10 +387,19 @@ def train(
     # create the agent
     policy_layers = [env.observation_space.shape[-1], 64, 64, env.action_space.shape[-1] * 2,]
     value_layers = [env.observation_space.shape[-1], 64, 64, 1]
-    agents = [Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device), 
-              Agent(policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device).to(device)]
-    
-    agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
+    network_arch = {"policy_layers": policy_layers,
+                    "value_layers": value_layers,
+                    "entropy_cost": entropy_cost,
+                    "discounting": discounting,
+                    "reward_scaling": reward_scaling,
+                    "device": device}
+    agents = [Agent(**network_arch).to(device), Agent(**network_arch).to(device)]
+    save_models(agents, network_arch)
+    if not debug:
+        agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
+    else:
+        agents = [agent.to(device) for agent in agents] #Only uncomment once whole pipeline is implemented
+
     optimizers = [optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents]
 
     sps = 0
@@ -410,10 +422,11 @@ def train(
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
             }
-            wandb.log({"eval/episode_reward" : episode_reward,
-                       "speed/sps": sps,
-                       "speed/eval_sps": eval_sps,
-                       "losses/total_loss": total_loss})
+            if not debug:
+                wandb.log({"eval/episode_reward" : episode_reward,
+                        "speed/sps": sps,
+                        "speed/eval_sps": eval_sps,
+                        "losses/total_loss": total_loss})
             progress_fn(total_steps, progress)
 
         if eval_i == eval_frequency:
@@ -430,10 +443,8 @@ def train(
             td = sd_map(unroll_first, td)
             # update normalization statistics
             update_normalization(agents, td.observation, env.obs_dims)
-
-
+            epoch_loss = 0.0
             for update_epoch in range(num_update_epochs):
-                epoch_loss = 0.0
                 # shuffle and batch the data
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
@@ -454,11 +465,15 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-            wandb.log({"training/epoch-loss": epoch_loss})
+            if not debug:
+                wandb.log({"training/epoch-loss": epoch_loss})
             print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
-        total_loss = total_loss / (num_epochs * num_update_epochs * num_minibatches)
+        total_loss = total_loss / ((num_epochs * num_update_epochs * num_minibatches) + 1)
         sps = num_epochs * num_steps / duration
+    save_models(agents, network_arch)
+
+

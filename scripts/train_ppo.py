@@ -2,13 +2,7 @@ import os
 from datetime import datetime
 import numpy as np
 import wandb
-
-#Visuals
-import mediapy as media
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-from IPython.display import HTML, clear_output, display
-import webbrowser
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 
@@ -16,7 +10,8 @@ from Humanoid_MARL.agent.ppo.train_torch import train
 def main():
     # ================ Config ================
     config = {
-        'num_timesteps': 100_000_000,
+        # 'num_timesteps': 1_000_000,
+        'num_timesteps': 100,
         'eval_frequency': 10,
         'episode_length': 1000,
         'unroll_length': 10,
@@ -28,12 +23,14 @@ def main():
         'num_envs': 2048,
         'batch_size': 512,
         'env_name': "humanoids",
-        'render' : False,
+        'render' : True,
         'device' : 'cuda',
+        'debug' : True
     }
     # ================ Config ================
     # ================ Logging ===============
-    wandb.init(project="MARL-Humanoid",
+    if not config['debug']:
+        wandb.init(project="MARL-Humanoid",
                     config=config)
     # ================ Progress Function ================
     xdata = []
