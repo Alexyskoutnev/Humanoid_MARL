@@ -454,7 +454,7 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-            wandb.log({"training-epoch-loss": epoch_loss})
+            wandb.log({"training/epoch-loss": epoch_loss})
             print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 

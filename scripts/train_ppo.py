@@ -28,7 +28,7 @@ def main():
         'num_envs': 2048,
         'batch_size': 512,
         'env_name': "humanoids",
-        'render' : True,
+        'render' : False,
         'device' : 'cuda',
     }
     # ================ Config ================
@@ -53,7 +53,9 @@ def main():
         plt.xlabel("# environment steps")
         plt.ylabel("reward per episode")
         plt.plot(xdata, ydata)
-        PLT_SAVE_PATH = os.path.join(path, name)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamped_name = f"{timestamp}_{name}"
+        PLT_SAVE_PATH = os.path.join(path, timestamped_name)
         plt.savefig(PLT_SAVE_PATH)
     # ================ Progress Function ================
     train(**config, progress_fn=progress)
