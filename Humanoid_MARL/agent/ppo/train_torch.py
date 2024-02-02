@@ -209,6 +209,12 @@ class Agent(nn.Module):
         entropy = torch.mean(self.dist_entropy(loc, scale))
         entropy_loss = self.entropy_cost * -entropy
 
+        wandb.log({
+            "critic-loss" : policy_loss,
+            "value-loss" : v_loss,
+            "entropy-loss" : entropy_loss
+        })
+
         return policy_loss + v_loss + entropy_loss
 
 def add_extra_dimension(data, idx : int = 1):
@@ -389,7 +395,7 @@ def train(
     num_envs: Union[int, None] = 2048,
     episode_length: int = 1000,
     device: str = "cuda",
-    num_timesteps: int = 30_000_000,
+    num_timesteps: int = 100_000_000,
     eval_frequency: int = 10,
     unroll_length: int = 5,
     batch_size: int = 1024,
@@ -398,7 +404,7 @@ def train(
     reward_scaling: float = 0.1,
     entropy_cost: float = 1e-2,
     discounting: float = 0.97,
-    learning_rate: float = 3e-4,
+    learning_rate: float = 3e-3,
     render : bool = False,
     debug : bool = False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
@@ -418,8 +424,8 @@ def train(
     env.step(action)
     
     # create the agent
-    policy_layers = [env.observation_space.shape[-1], 64, 64, env.action_space.shape[-1] * 2,]
-    value_layers = [env.observation_space.shape[-1], 64, 64, 1]
+    policy_layers = [sum(env.obs_dims), 128, 128, env.action_space.shape[-1] * 2,]
+    value_layers = [sum(env.obs_dims), 128, 128, 1]
     network_arch = {"policy_layers": policy_layers,
                     "value_layers": value_layers,
                     "entropy_cost": entropy_cost,
@@ -427,10 +433,11 @@ def train(
                     "reward_scaling": reward_scaling,
                     "device": device}
     agents = [Agent(**network_arch).to(device), Agent(**network_arch).to(device)]
-    if not debug:
-        agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
-    else:
-        agents = [agent.to(device) for agent in agents] #Only uncomment once whole pipeline is implemented
+    # if not debug:
+    #     breakpoint()
+    #     agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
+    # else:
+    #     agents = [agent.to(device) for agent in agents] #Only uncomment once whole pipeline is implemented
 
     optimizers = [optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents]
 
@@ -498,7 +505,7 @@ def train(
                         total_loss += loss
                         epoch_loss += loss
             if not debug:
-                wandb.log({"training/epoch-loss": epoch_loss})
+                wandb.log({"training/epoch-loss": epoch_loss / num_epoch + 1})
             print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 

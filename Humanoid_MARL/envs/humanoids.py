@@ -37,6 +37,7 @@ from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 import cProfile
 import torch
+import numpy as np
 
 #Debugging Flags
 from jax import config
@@ -192,13 +193,13 @@ class Humanoid(PipelineEnv):
 
     def __init__(
         self,
-        forward_reward_weight=5.25,
-        ctrl_cost_weight=0.1,
-        healthy_reward=2.5,
+        forward_reward_weight=2.25,
+        ctrl_cost_weight=0.0,
+        healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
-        reset_noise_scale=1e-1,
-        exclude_current_positions_from_observation=False,
+        reset_noise_scale=1e-2,
+        exclude_current_positions_from_observation=True,
         backend="generalized",
         visual="brax",
         num_humanoids=2,
@@ -219,7 +220,10 @@ class Humanoid(PipelineEnv):
         n_frames = 5
         self.num_humaniods = num_humanoids
         self._dims = None
-        self._position_dim = 24
+        if exclude_current_positions_from_observation:
+            self._position_dim = 20
+        else:
+            self._position_dim = 24
         self._velocity_dim = 23
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
@@ -367,8 +371,9 @@ class Humanoid(PipelineEnv):
         velocity = pipeline_state.qd
 
         if self._exclude_current_positions_from_observation:
-            position = position[2:]
-
+            indices_to_remove = np.array([0, 1, 24, 25]) #Removing CoM x-y for humanoid 1 and 2
+            position = position[np.logical_not(np.isin(np.arange(len(position)), indices_to_remove))]
+    
         com, inertia, mass_sum, x_i = self._com(pipeline_state)
 
         if self.num_humaniods == 1:
@@ -379,9 +384,7 @@ class Humanoid(PipelineEnv):
             x_i_pos = reshape_vector(x_i.pos, (self.num_humaniods, -1, 3))
             pos_replace = reshape_vector(self._flatten(x_i_pos - com), (-1, 3))
             cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
-            mass_sum = self._flatten(
-                mass_sum[0]
-            )  # double check that mass_sum arent different btw the two robots
+            mass_sum = self._flatten(mass_sum[0])  # double check that mass_sum arent different btw the two robots
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -400,7 +403,6 @@ class Humanoid(PipelineEnv):
         qfrc_actuator = actuator.to_tau(
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
-
         # external_contact_forces are excluded
         return jp.concatenate(
             [

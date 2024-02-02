@@ -43,7 +43,7 @@ if __name__ == "__main__":
         'env_name': "humanoids",
         'render' : True,
         'device' : 'cuda',
-        'model_path' : "./models/20240131_134440_ppo.pt",
+        'model_path' : "./models/20240202_130311_ppo.pt",
         'video_length' : 300,
     }
     main(config)

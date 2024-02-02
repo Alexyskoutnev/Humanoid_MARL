@@ -9,15 +9,19 @@ from Humanoid_MARL.agent.ppo.train_torch import train
 
 def main():
     # ================ Config ================
+    #   'humanoid': functools.partial(ppo.train,  num_timesteps=50_000_000, num_evals=10,
+    #                                 reward_scaling=0.1, episode_length=1000, normalize_observations=True,
+    #                                 action_repeat=1, unroll_length=10, num_minibatches=32, num_updates_per_batch=8, 
+    #                                 discounting=0.97, learning_rate=3e-4, entropy_cost=1e-3, num_envs=2048, batch_size=1024, seed=1),
     config = {
         'num_timesteps': 100_000_000,
-        'eval_frequency': 20,
+        'eval_frequency': 10,
         'episode_length': 1000,
         'unroll_length': 10,
         'num_minibatches': 32,
-        'num_update_epochs': 4,
+        'num_update_epochs': 8,
         'discounting': 0.97,
-        'learning_rate': 5e-3,
+        'learning_rate': 3e-3,
         'entropy_cost': 1e-2,
         'num_envs': 2048,
         'batch_size': 512,
