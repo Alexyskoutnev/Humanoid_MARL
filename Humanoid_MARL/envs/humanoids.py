@@ -1,18 +1,3 @@
-# Copyright 2023 The Brax Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# pylint:disable=g-multiple-import
 """Trains a humanoid to run in the +x direction."""
 
 import os
@@ -194,10 +179,10 @@ class Humanoid(PipelineEnv):
     def __init__(
         self,
         forward_reward_weight=2.25,
-        ctrl_cost_weight=0.0,
+        ctrl_cost_weight=0.1,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
-        healthy_z_range=(1.0, 2.5),
+        healthy_z_range=(0.8, 2.5),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         backend="generalized",
@@ -306,11 +291,12 @@ class Humanoid(PipelineEnv):
     def _check_is_healthy(self, pipeline_state, min_z, max_z):
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy_1)
-        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
-        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
+        # is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
+        # is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
         is_healthy_1_test = is_healthy_1.astype(jp.int32)
-        is_healthy_2_test = is_healthy_2.astype(jp.int32)
-        return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+        # is_healthy_2_test = is_healthy_2.astype(jp.int32)
+        # return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+        return is_healthy_1_test
 
     def _control_reward(self, action):
         action = reshape_vector(action, (self.num_humaniods, action.shape[0] // self.num_humaniods),)

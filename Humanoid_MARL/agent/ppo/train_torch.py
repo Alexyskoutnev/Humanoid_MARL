@@ -67,7 +67,7 @@ class Agent(nn.Module):
         self.discounting = discounting
         self.reward_scaling = reward_scaling
         self.lambda_ = 0.95
-        self.epsilon = 0.3
+        self.epsilon = 0.2
         self.device = device
 
     @torch.jit.export
@@ -355,6 +355,10 @@ def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=F
                    "distance_from_origin_h2" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[1].item(),
                    "training_reward_h1" : rewards[0].cpu().item(),
                    "training_reward_h2" : rewards[1].cpu().item(),
+                   "x_velocity_h1" : (torch.sum(info["x_velocity"], dim=0) / info["x_velocity"].shape[0]).cpu()[0].item(),
+                   "x_velocity_h2" : (torch.sum(info["x_velocity"], dim=0) / info["x_velocity"].shape[0]).cpu()[1].item(),
+                   "y_velocity_h1" : (torch.sum(info["y_velocity"], dim=0) / info["y_velocity"].shape[0]).cpu()[0].item(),
+                   "y_velocity_h2" : (torch.sum(info["y_velocity"], dim=0) / info["y_velocity"].shape[0]).cpu()[1].item(),
                    })
     # Apply torch.stack to each field in sd
     td = sd_map(torch.stack, sd, add_dim=add_dim)
@@ -402,9 +406,9 @@ def train(
     num_minibatches: int = 32,
     num_update_epochs: int = 4,
     reward_scaling: float = 0.1,
-    entropy_cost: float = 1e-2,
+    entropy_cost: float = 1e-3,
     discounting: float = 0.97,
-    learning_rate: float = 3e-3,
+    learning_rate: float = 3e-4,
     render : bool = False,
     debug : bool = False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
