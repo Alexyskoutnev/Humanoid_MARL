@@ -187,7 +187,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         ctrl_cost_weight=0.5,
         use_contact_forces=False,
         contact_cost_weight=5e-4,
-        healthy_reward=2.0,
+        healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(0.2, 1.0),
         contact_force_range=(-1.0, 1.0),
@@ -307,6 +307,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         self._qy = y_velocity
 
         forward_reward = abs(x_velocity) + abs(y_velocity)  # i think it should now be called non-stationary reward.
+        # forward_reward = 0  # i think it should now be called non-stationary reward.
         healthy_reward = self.healthy_reward
 
         rewards = forward_reward + healthy_reward

@@ -26,7 +26,7 @@ parser.add_argument("--env_name", type=str, default='Ant-v4', help="'Ant-v2','Ha
 parser.add_argument("--algo", type=str, default='ppo', help='algorithm to adjust (default : ppo)')
 parser.add_argument('--train', type=bool, default=True, help="(default: True)")
 parser.add_argument('--render', type=bool, default=True, help="(default: False)")
-parser.add_argument('--epochs', type=int, default=2000, help='number of epochs, (default: 1000)')
+parser.add_argument('--epochs', type=int, default=10000, help='number of epochs, (default: 1000)')
 parser.add_argument('--tensorboard', type=bool, default=False, help='use_tensorboard, (default: False)')
 parser.add_argument("--load", type=str, default='no', help='load network name in ./model_weights')
 parser.add_argument("--save_interval", type=int, default=5, help='save interval(default: 100)')
@@ -70,17 +70,17 @@ import pickle
 
 # IN CASE WANTED TO RETRAIN
 
-# load_epoch = "135"
-# agent_runner.load_state_dict(torch.load("./model_weights/agent_runner_" + load_epoch))
-# agent_chaser.load_state_dict(torch.load("./model_weights/agent_chaser_" + load_epoch))
+load_epoch = "385"
+agent_runner.load_state_dict(torch.load("./model_weights/agent_runner_" + load_epoch))
+agent_chaser.load_state_dict(torch.load("./model_weights/agent_chaser_" + load_epoch))
 
 if (torch.cuda.is_available()) and (args.use_cuda):
     print("Using CuDA")
     agent_chaser = agent_chaser.cuda()
     agent_runner = agent_runner.cuda()
 
-# state_rms_runner = pickle.load(open("./model_weights/rms_runner_" + load_epoch, 'rb'))
-# state_rms_chaser = pickle.load(open("./model_weights/rms_chaser_" + load_epoch, 'rb'))
+state_rms_runner = pickle.load(open("./model_weights/rms_runner_" + load_epoch, 'rb'))
+state_rms_chaser = pickle.load(open("./model_weights/rms_chaser_" + load_epoch, 'rb'))
 # if args.load != 'no':
 #     agent.load_state_dict(torch.load("./model_weights/"+args.load))
 
@@ -92,7 +92,7 @@ state_lst_runner = []
 
 
 chase_after = 100    # START CHASE REWARD AFTER
-chase_reward = False
+chase_reward = True
 
 import pickle
 from random import randint
@@ -113,11 +113,10 @@ def get_init_coords():
         return a, b, c, d
 
 def get_health_penalty(state_):
-    x, y = state_[:2]
+    return 0.
     z = state_[2]
     z_penalty = 100*(z-0.6)**6
-    xy_penalty = 0.25 * ((x/10)**2 + (y/10)**2)
-    return np.clip(z_penalty + xy_penalty, 0, 0.5)
+    return np.clip(z_penalty, 0, 0.5)
 
 if agent_args.on_policy == True:
     score_chaser = score_runner = 0.0
@@ -173,7 +172,7 @@ if agent_args.on_policy == True:
             chaser_reward = 10 * (d_1 - d_2)
             if chase_reward and not done_chaser:
                 # switch rewards to penalize being unhealthy
-                reward_chaser += np.clip(chaser_reward, 0, 1) - get_health_penalty(next_state_chaser_)
+                reward_chaser += np.clip(chaser_reward, 0, 3) - get_health_penalty(next_state_chaser_)
             score_chaser += reward_chaser
 
             # runner
@@ -198,31 +197,39 @@ if agent_args.on_policy == True:
                   abs(next_state_runner_[1] - state_chaser_[1])
             runner_reward = 10 * (d_2 - d_1)
             if chase_reward and not done_runner:
-                reward_runner += np.clip(runner_reward, 0, 1) - get_health_penalty(next_state_runner_)
+                reward_runner += np.clip(runner_reward, 0, 3) - get_health_penalty(next_state_runner_)
 
-            next_state_runner_ = augment_state(next_state_runner_, next_state_chaser_)
-            next_state_runner = np.clip((next_state_runner_ - state_rms_runner.mean) / (state_rms_runner.var ** 0.5 + 1e-8), -5, 5)
+            _next_state_runner_ = augment_state(next_state_runner_, state_chaser_)
+            _next_state_runner = np.clip((_next_state_runner_ - state_rms_runner.mean) / (state_rms_runner.var ** 0.5 + 1e-8), -5, 5)
             transition = make_transition(state_runner, \
                                          action_runner.cpu().numpy(), \
                                          np.array([reward_runner * args.reward_scaling]), \
-                                         next_state_runner, \
+                                         _next_state_runner, \
                                          np.array([done_runner ]), \
                                          log_prob_runner.detach().cpu().numpy() \
                                          )
             agent_runner.put_data(transition)
             score_runner += reward_runner
-            next_state_chaser_ = augment_state(next_state_chaser_,
-                                               next_state_runner_)
-            next_state_chaser = np.clip(
-                (next_state_chaser_ - state_rms_chaser.mean) / (state_rms_chaser.var ** 0.5 + 1e-8), -5, 5)
+            _next_state_chaser_ = augment_state(next_state_chaser_,
+                                               state_runner_)
+            _next_state_chaser = np.clip(
+                (_next_state_chaser_ - state_rms_chaser.mean) / (state_rms_chaser.var ** 0.5 + 1e-8), -5, 5)
             transition = make_transition(state_chaser, \
                                          action_chaser.cpu().numpy(), \
                                          np.array([reward_chaser * args.reward_scaling]), \
-                                         next_state_chaser, \
+                                         _next_state_chaser, \
                                          np.array([done_chaser ]), \
                                          log_prob_chaser.detach().cpu().numpy() \
                                          )
             agent_chaser.put_data(transition)
+
+            next_state_runner_ = augment_state(next_state_runner_, state_chaser_)
+            next_state_runner = np.clip(
+                (next_state_runner_ - state_rms_runner.mean) / (state_rms_runner.var ** 0.5 + 1e-8), -5, 5)
+            next_state_chaser_ = augment_state(next_state_chaser_,
+                                                state_runner_)
+            next_state_chaser = np.clip(
+                (next_state_chaser_ - state_rms_chaser.mean) / (state_rms_chaser.var ** 0.5 + 1e-8), -5, 5)
 
             closeness = (abs(next_state_runner_[0] - next_state_chaser_[0]) + \
                             abs(next_state_runner_[1] - next_state_chaser_[1]))
@@ -266,7 +273,7 @@ if agent_args.on_policy == True:
                 state_runner = next_state_runner
                 state_runner_ = next_state_runner_
 
-        # agent_chaser.train_net(n_epi)
+        agent_chaser.train_net(n_epi)
         agent_runner.train_net(n_epi)
         # if n_epi < 20:            # disable scaler update after a fixed iteration
         state_rms_chaser.update(np.vstack(state_lst_chaser))
