@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 import wandb
 import matplotlib.pyplot as plt
-
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from Humanoid_MARL.agent.ppo.train_torch import train
 
 
@@ -23,12 +23,12 @@ def main():
         'discounting': 0.97,
         'learning_rate': 3e-3,
         'entropy_cost': 1e-2,
-        'num_envs': 2048,
+        'num_envs': 8,
         'batch_size': 512,
         'env_name': "humanoids",
         'render' : False,
-        'device' : 'cuda',
-        'debug' : False
+        'device' : 'cpu',
+        'debug' : True
     }
     # ================ Config ================
     # ================ Logging ===============
@@ -42,7 +42,7 @@ def main():
     train_sps = []
     times = [datetime.now()]
 
-    def progress(num_steps, metrics, path="./data/ppo", name="ppo_training_plot.png"):
+    def progress(num_steps, metrics, path="data/ppo", name="ppo_training_plot.png"):
         times.append(datetime.now())
         xdata.append(num_steps)
         ydata.append(metrics["eval/episode_reward"].cpu())

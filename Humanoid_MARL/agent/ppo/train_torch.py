@@ -209,11 +209,11 @@ class Agent(nn.Module):
         entropy = torch.mean(self.dist_entropy(loc, scale))
         entropy_loss = self.entropy_cost * -entropy
 
-        wandb.log({
-            "critic-loss" : policy_loss,
-            "value-loss" : v_loss,
-            "entropy-loss" : entropy_loss
-        })
+        # wandb.log({
+        #     "critic-loss" : policy_loss,
+        #     "value-loss" : v_loss,
+        #     "entropy-loss" : entropy_loss
+        # })
 
         return policy_loss + v_loss + entropy_loss
 
@@ -296,7 +296,7 @@ def get_obs(obs, dims, num_agents):
             start_idx += chunk_size
         elif len(obs.shape) > 1:
             chunk_size = dim * num_agents
-            chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (num_agents, -1, dim))
+            chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
             chunks.append(chunk)
             start_idx += chunk_size
     if len(obs.shape) == 1:
@@ -310,7 +310,7 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
     logits, actions = [], []
     for idx, agent in enumerate(agents):
         if len(obs) == 2:
-            logit, action = agent.get_logits_action(obs[idx,:])
+            logit, action = agent.get_logits_action(obs[idx,:])             # obs
         else:
             logit, action = agent.get_logits_action(obs[:,idx,:])
         logits.append(logit)
@@ -339,23 +339,23 @@ def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=F
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
         sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
-        wandb.log({"forward_reward_h1" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[0].item(),
-                   "forward_reward_h2" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[1].item(),
-                   "reward_linvel_h1" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[0].item(),
-                   "reward_linvel_h2" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[1].item(),
-                   "reward_quadctrl_h1" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[0].item(),
-                   "reward_quadctrl_h2" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[1].item(),
-                   "reward_alive_h1" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[0].item(),
-                   "reward_alive_h2" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[1].item(),
-                   "x_position_h1" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[0].item(),
-                   "x_position_h2" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[1].item(),
-                   "y_position_h1" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[0].item(),
-                   "y_position_h2" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[1].item(),
-                   "distance_from_origin_h1" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[0].item(),
-                   "distance_from_origin_h2" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[1].item(),
-                   "training_reward_h1" : rewards[0].cpu().item(),
-                   "training_reward_h2" : rewards[1].cpu().item(),
-                   })
+        # wandb.log({"forward_reward_h1" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[0].item(),
+        #            "forward_reward_h2" : (torch.sum(info["forward_reward"], dim=0) / info["forward_reward"].shape[0]).cpu()[1].item(),
+        #            "reward_linvel_h1" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[0].item(),
+        #            "reward_linvel_h2" : (torch.sum(info["reward_linvel"], dim=0) / info["reward_linvel"].shape[0]).cpu()[1].item(),
+        #            "reward_quadctrl_h1" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[0].item(),
+        #            "reward_quadctrl_h2" : (torch.sum(info["reward_quadctrl"], dim=0) / info["reward_quadctrl"].shape[0]).cpu()[1].item(),
+        #            "reward_alive_h1" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[0].item(),
+        #            "reward_alive_h2" : (torch.sum(info["reward_alive"], dim=0) / info["reward_alive"].shape[0]).cpu()[1].item(),
+        #            "x_position_h1" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[0].item(),
+        #            "x_position_h2" : (torch.sum(info["x_position"], dim=0) / info["x_position"].shape[0]).cpu()[1].item(),
+        #            "y_position_h1" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[0].item(),
+        #            "y_position_h2" : (torch.sum(info["y_position"], dim=0) / info["y_position"].shape[0]).cpu()[1].item(),
+        #            "distance_from_origin_h1" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[0].item(),
+        #            "distance_from_origin_h2" : (torch.sum(info["distance_from_origin"], dim=0) / info["distance_from_origin"].shape[0]).cpu()[1].item(),
+        #            "training_reward_h1" : rewards[0].cpu().item(),
+        #            "training_reward_h2" : rewards[1].cpu().item(),
+        #            })
     # Apply torch.stack to each field in sd
     td = sd_map(torch.stack, sd, add_dim=add_dim)
     return observation, td
@@ -461,11 +461,11 @@ def train(
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
             }
-            if not debug:
-                wandb.log({"eval/episode_reward" : episode_reward,
-                        "speed/sps": sps,
-                        "speed/eval_sps": eval_sps,
-                        "losses/total_loss": total_loss})
+            # if not debug:
+            #     wandb.log({"eval/episode_reward" : episode_reward,
+            #             "speed/sps": sps,
+            #             "speed/eval_sps": eval_sps,
+            #             "losses/total_loss": total_loss})
             progress_fn(total_steps, progress)
 
         if eval_i == eval_frequency:
@@ -504,8 +504,8 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-            if not debug:
-                wandb.log({"training/epoch-loss": epoch_loss / num_epoch + 1})
+            # if not debug:
+            #     wandb.log({"training/epoch-loss": epoch_loss / num_epoch + 1})
             print(f"epoch {num_epoch} : [{epoch_loss}]")
 
 
