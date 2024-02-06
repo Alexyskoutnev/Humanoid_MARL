@@ -31,6 +31,9 @@ StepData = collections.namedtuple(
     "StepData", ("observation", "logits", "action", "reward", "done", "truncation")
 )
 
+class SavingModelException(Exception):
+    pass
+
 class Agent(nn.Module):
     """Standard PPO Agent with GAE and observation normalization."""
 
@@ -296,7 +299,9 @@ def get_obs(obs, dims, num_agents):
             start_idx += chunk_size
         elif len(obs.shape) > 1:
             chunk_size = dim * num_agents
-            chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (num_agents, -1, dim))
+            # breakpoint()
+            # chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (num_agents, -1, dim))
+            chunk = torch.reshape(obs[:, start_idx: start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
             chunks.append(chunk)
             start_idx += chunk_size
     if len(obs.shape) == 1:
@@ -436,7 +441,9 @@ def train(
                     "discounting": discounting,
                     "reward_scaling": reward_scaling,
                     "device": device}
+    
     agents = [Agent(**network_arch).to(device), Agent(**network_arch).to(device)]
+    
     # if not debug:
     #     breakpoint()
     #     agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
@@ -517,6 +524,10 @@ def train(
         total_steps += num_epochs * num_steps
         total_loss = total_loss / ((num_epochs * num_update_epochs * num_minibatches) + 1)
         sps = num_epochs * num_steps / duration
-    save_models(agents, network_arch)
+    try:
+        save_models(agents, network_arch)
+    except:
+        raise SavingModelException
+
 
 
