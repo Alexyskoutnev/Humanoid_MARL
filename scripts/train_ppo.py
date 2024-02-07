@@ -10,7 +10,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def main():
     config = {
-        'num_timesteps': 100_000_000,
+        'num_timesteps': 200_000_000,
+        'eval_reward_limit' : 10_000,
         'eval_frequency': 100,
         'episode_length': 1000,
         'unroll_length': 10,
@@ -29,7 +30,7 @@ def main():
     # ================ Config ================
     # ================ Logging ===============
     if not config['debug']:
-        wandb.init(project="MARL-Humanoid",
+        wandb.init(project="MARL-Humanoids",
                     config=config)
     # ================ Progress Function ================
     xdata = []
@@ -45,7 +46,7 @@ def main():
         eval_sps.append(metrics["speed/eval_sps"])
         train_sps.append(metrics["speed/sps"])
         plt.xlim([0, config['num_timesteps']])
-        plt.ylim([0, 6000])
+        plt.ylim([0, 10_000])
         plt.xlabel("# environment steps")
         plt.ylabel("reward per episode")
         plt.plot(xdata, ydata)

@@ -53,6 +53,7 @@ class GymWrapper(gym.Env):
         self.seed(seed)
         self.backend = backend
         self._state = None
+        self.sys = env.sys
 
         obs = np.inf * np.ones(
             self._env.observation_size // self.num_agents, dtype="float32"

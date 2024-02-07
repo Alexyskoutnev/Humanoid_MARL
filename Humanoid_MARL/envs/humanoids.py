@@ -291,12 +291,11 @@ class Humanoid(PipelineEnv):
     def _check_is_healthy(self, pipeline_state, min_z, max_z):
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy_1)
-        # is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
-        # is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
         is_healthy_1_test = is_healthy_1.astype(jp.int32)
-        # is_healthy_2_test = is_healthy_2.astype(jp.int32)
-        # return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
-        return is_healthy_1_test
+        is_healthy_2_test = is_healthy_2.astype(jp.int32)
+        return (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
 
     def _control_reward(self, action):
         action = reshape_vector(action, (self.num_humaniods, action.shape[0] // self.num_humaniods),)

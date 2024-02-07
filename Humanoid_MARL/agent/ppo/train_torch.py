@@ -414,6 +414,7 @@ def train(
     entropy_cost: float = 1e-3,
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
+    eval_reward_limit: float = 5000,
     render : bool = False,
     debug : bool = False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
@@ -444,11 +445,7 @@ def train(
     
     agents = [Agent(**network_arch).to(device), Agent(**network_arch).to(device)]
     
-    # if not debug:
-    #     breakpoint()
-    #     agents = [torch.jit.script(agent.to(device)) for agent in agents] #Only uncomment once whole pipeline is implemented
-    # else:
-    #     agents = [agent.to(device) for agent in agents] #Only uncomment once whole pipeline is implemented
+    agents = [agent.to(device) for agent in agents] #Only uncomment once whole pipeline is implemented
 
     optimizers = [optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents]
 
@@ -478,6 +475,8 @@ def train(
                         "speed/eval_sps": eval_sps,
                         "losses/total_loss": total_loss})
             progress_fn(total_steps, progress)
+            if episode_reward >= eval_reward_limit:
+                break
 
         if eval_i == eval_frequency:
             break
