@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
 def main():
+    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+    print(f"USING GPU {gpu_index}")
     config = {
         'num_timesteps': 200_000_000,
         'eval_reward_limit' : 10_000,
@@ -25,7 +25,8 @@ def main():
         'env_name': "humanoids",
         'render' : False,
         'device' : 'cuda',
-        'debug' : False
+        'debug' : False,
+        'device_idx' : gpu_index
     }
     # ================ Config ================
     # ================ Logging ===============

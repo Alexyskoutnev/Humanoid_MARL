@@ -285,6 +285,7 @@ class Humanoid(PipelineEnv):
             "distance_from_origin": zero_init,
             "x_velocity": zero_init,
             "y_velocity": zero_init,
+            "z_position": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -321,9 +322,8 @@ class Humanoid(PipelineEnv):
 
         min_z, max_z = self._healthy_z_range
         is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
-
         if self._terminate_when_unhealthy:
-            healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods)
+            healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods) * (is_healthy)
         else:
             healthy_reward = self._healthy_reward * is_healthy
             
@@ -332,6 +332,8 @@ class Humanoid(PipelineEnv):
         obs = self._get_obs(pipeline_state, action)
         reward = forward_reward + healthy_reward - ctrl_cost
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
+        
+        humanoids_z = jp.concatenate([pipeline_state.x.pos[0, 2].reshape(-1), pipeline_state.x.pos[11, 2].reshape(-1)])  
 
         state.metrics.update(
             forward_reward=forward_reward,
@@ -343,6 +345,7 @@ class Humanoid(PipelineEnv):
             distance_from_origin=jp.linalg.norm(com_after, axis=1),
             x_velocity=velocity[:, 0],
             y_velocity=velocity[:, 1],
+            z_position=humanoids_z
         )
 
         return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)

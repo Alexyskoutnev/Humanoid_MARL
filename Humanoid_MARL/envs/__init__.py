@@ -7,6 +7,8 @@ from Humanoid_MARL.envs import test_env
 from Humanoid_MARL.envs import humanoids, humanoid
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
+from Humanoid_MARL.envs.wrappers import VmapWrapper
+import jax
 
 _envs = {
     'test': test_env.Humanoid,
@@ -44,6 +46,7 @@ def create(
     action_repeat: int = 1,
     auto_reset: bool = True,
     batch_size: Optional[int] = None,
+    device_idx : int = 0,
     **kwargs,
 ) -> Env:
   """Creates an environment from the registry.
@@ -60,11 +63,18 @@ def create(
     env: an environment
   """
   env = _envs[env_name](**kwargs)
+  try:
+    device_name = jax.local_devices()[int(device_idx)]
+  except:
+    device_name = jax.local_devices()[0]
+  finally:
+    print("No Avaliable GPUs")
+
 
   if episode_length is not None:
     env = training.EpisodeWrapper(env, episode_length, action_repeat)
   if batch_size:
-    env = training.VmapWrapper(env, batch_size)
+    env = VmapWrapper(env, batch_size, device=device_name)
   if auto_reset:
     env = training.AutoResetWrapper(env)
 

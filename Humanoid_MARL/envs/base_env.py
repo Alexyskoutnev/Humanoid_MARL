@@ -161,15 +161,6 @@ class VectorGymWrapper(gym.vector.VectorEnv):
 
         self._step = jax.jit(step, backend=self.backend)
 
-        # def render(mode="rgb_array"):
-        #     if mode == "rgb_array":
-        #       sys, state = self._env.sys, self._state
-        #       return image.render_array(sys, take(state.pipeline_state, 0), 512, 512)
-        #     else:
-        #       return None
-        
-        # self._render = jax.jit(render)
-
     def reset(self):
         self._state, obs, self._key = self._reset(self._key)
         return obs

@@ -220,21 +220,12 @@ class Agent(nn.Module):
 
         return policy_loss + v_loss + entropy_loss
 
-def add_extra_dimension(data, idx : int = 1):
-    if len(data.shape) == 2:
-        return data.unsqueeze(idx)
-    elif len(data.shape) == 3:
-        return data.unsqueeze(idx + 1)
-
-def sd_map(f: Callable[..., torch.Tensor], *sds, add_dim: bool = False) -> StepData:
+def sd_map(f: Callable[..., torch.Tensor], *sds) -> StepData:
     """Map a function over each field in StepData."""
     items = {}
     keys = sds[0]._asdict().keys()
     for k in keys:
         items[k] = f(*[sd._asdict()[k] for sd in sds])
-    if add_dim:
-        for k in keys:
-            items[k] = add_extra_dimension(items[k])
     return StepData(**items)
 
 def sd_map_minibatch(f: Callable[..., torch.Tensor], *sds, **kwargs) -> StepData:
@@ -264,6 +255,7 @@ def eval_unroll(agents : List[Agent],
     episodes = torch.zeros((), device=device)
     episode_reward = torch.zeros((), device=device)
     frames = []
+    num_resets = 1
     for i in range(length):
         logits, action = get_agent_actions(agents, observation, env.obs_dims)
         if get_jax_state:
@@ -325,7 +317,7 @@ def get_agent_actions(agents : List[Agent], observation : torch.Tensor, dims : T
     else:
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
-def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=False):
+def train_unroll(agents, env, observation, num_unrolls, unroll_length):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
     for _ in range(num_unrolls):
@@ -364,9 +356,11 @@ def train_unroll(agents, env, observation, num_unrolls, unroll_length, add_dim=F
                    "x_velocity_h2" : (torch.sum(info["x_velocity"], dim=0) / info["x_velocity"].shape[0]).cpu()[1].item(),
                    "y_velocity_h1" : (torch.sum(info["y_velocity"], dim=0) / info["y_velocity"].shape[0]).cpu()[0].item(),
                    "y_velocity_h2" : (torch.sum(info["y_velocity"], dim=0) / info["y_velocity"].shape[0]).cpu()[1].item(),
+                   "z_position_h1" : (torch.sum(info["z_position"], dim=0) / info["z_position"].shape[0]).cpu()[0].item(),
+                   "z_position_h2" : (torch.sum(info["z_position"], dim=0) / info["z_position"].shape[0]).cpu()[1].item(),
                    })
     # Apply torch.stack to each field in sd
-    td = sd_map(torch.stack, sd, add_dim=add_dim)
+    td = sd_map(torch.stack, sd)
     return observation, td
 
 def update_normalization(agents : List[Agent], observation : torch.Tensor, dims : Tuple[int]):
@@ -417,11 +411,13 @@ def train(
     eval_reward_limit: float = 5000,
     render : bool = False,
     debug : bool = False,
+    device_idx : int = 0,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ):
     """Trains a policy via PPO."""
     env = envs.create(
-        env_name, batch_size=num_envs, episode_length=episode_length, backend="generalized"
+        env_name, batch_size=num_envs, episode_length=episode_length, backend="generalized",
+        device_idx=device_idx
     )
     
     env = VectorGymWrapper(env)
