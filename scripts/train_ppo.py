@@ -13,7 +13,7 @@ def main():
     project_name = "debug"
     config = {
         'num_timesteps': 100_000_000,
-        'eval_reward_limit' : 6000,
+        'eval_reward_limit' : 5000,
         'eval_frequency': 100,
         'episode_length': 1000,
         'unroll_length': 10,
@@ -24,10 +24,10 @@ def main():
         'entropy_cost': 1e-3,
         'num_envs': 2048,
         'batch_size': 512,
-        'env_name': "humanoid",
+        'env_name': "humanoids",
         'render' : False,
         'device' : 'cuda',
-        'debug' : False,
+        'debug' : True,
         'device_idx' : gpu_index
     }
     # ================ Config ================

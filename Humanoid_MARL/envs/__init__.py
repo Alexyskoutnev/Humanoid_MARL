@@ -67,9 +67,6 @@ def create(
     device_name = jax.local_devices()[int(device_idx)]
   except:
     device_name = jax.local_devices()[0]
-  finally:
-    print("No Avaliable GPUs")
-
 
   if episode_length is not None:
     env = training.EpisodeWrapper(env, episode_length, action_repeat)

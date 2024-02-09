@@ -25,7 +25,8 @@ from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
-# from Humanoid_MARL.utils import WandbLogger
+from Humanoid_MARL.utils.logger import WandbLogger
+os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'platform'
 
 
 StepData = collections.namedtuple(
@@ -77,7 +78,7 @@ class Agent(nn.Module):
         self.device = device
 
     @torch.jit.export
-    def dist_create(self, logits):
+    def dist_create(self, logits : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Normal followed by tanh.
 
         torch.distribution doesn't work with torch.jit, so we roll our own."""
@@ -86,15 +87,15 @@ class Agent(nn.Module):
         return loc, scale
 
     @torch.jit.export
-    def dist_sample_no_postprocess(self, loc, scale):
+    def dist_sample_no_postprocess(self, loc : torch.Tensor, scale : torch.Tensor) -> torch.Tensor:
         return torch.normal(loc, scale)
 
     @classmethod
-    def dist_postprocess(cls, x):
+    def dist_postprocess(cls, x : torch.Tensor) -> torch.Tensor:
         return torch.tanh(x)
 
     @torch.jit.export
-    def dist_entropy(self, loc, scale):
+    def dist_entropy(self, loc : torch.Tensor, scale : torch.Tensor) -> torch.Tensor:
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         entropy = 0.5 + log_normalized
         entropy = entropy * torch.ones_like(loc)
@@ -104,7 +105,7 @@ class Agent(nn.Module):
         return entropy.sum(dim=-1)
 
     @torch.jit.export
-    def dist_log_prob(self, loc, scale, dist):
+    def dist_log_prob(self, loc : torch.Tensor, scale : torch.Tensor, dist : torch.Tensor) -> torch.Tensor:
         log_unnormalized = -0.5 * ((dist - loc) / scale).square()
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         log_det_jacobian = 2 * (math.log(2) - dist - F.softplus(-2 * dist))
@@ -112,7 +113,7 @@ class Agent(nn.Module):
         return log_prob.sum(dim=-1)
 
     @torch.jit.export
-    def update_normalization(self, observation):
+    def update_normalization(self, observation :torch) -> None:
         self.num_steps += observation.shape[0] * observation.shape[1]
         input_to_old_mean = observation - self.running_mean
         mean_diff = torch.sum(input_to_old_mean / self.num_steps, dim=(0, 1))
@@ -122,13 +123,13 @@ class Agent(nn.Module):
         self.running_variance = self.running_variance + var_diff
 
     @torch.jit.export
-    def normalize(self, observation):
+    def normalize(self, observation : torch.Tensor) -> torch.Tensor:
         variance = self.running_variance / (self.num_steps + 1.0)
         variance = torch.clip(variance, 1e-6, 1e6)
         return ((observation - self.running_mean) / variance.sqrt()).clip(-5, 5)
 
     @torch.jit.export
-    def get_logits_action(self, observation):
+    def get_logits_action(self, observation : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         observation = self.normalize(observation)
         logits = self.policy(observation)
         loc, scale = self.dist_create(logits)
@@ -137,6 +138,7 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def compute_gae(self, truncation, termination, reward, values, bootstrap_value):
+        breakpoint()
         truncation_mask = 1 - truncation
         # Append bootstrapped value to get [v1, ..., v_t+1]
         values_t_plus_1 = torch.cat(
@@ -171,7 +173,7 @@ class Agent(nn.Module):
         return vs, advantages
 
     @torch.jit.export
-    def loss(self, td: Dict[str, torch.Tensor], agent_idx: int, debug=True, logger=None):
+    def loss(self, td: Dict[str, torch.Tensor], agent_idx: int, debug : bool = False, logger : Optional[WandbLogger] = None):
         observation = self.normalize(td["observation"][:, :, agent_idx, :])
         policy_logits = self.policy(observation[:-1])
         baseline = self.value(observation)
@@ -187,7 +189,7 @@ class Agent(nn.Module):
             action_agent_idx = action
             td_logits = td["logits"]
             td_logit_agent_idx = td_logits
-        elif len(td["reward"].shape) == 3:
+        else:
             reward = td["reward"][:, :, agent_idx] * self.reward_scaling
             termination = td["done"] * (1 - td["truncation"])
 
@@ -212,6 +214,7 @@ class Agent(nn.Module):
         target_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
 
         with torch.no_grad():
+            breakpoint()
             vs, advantages = self.compute_gae(
                 truncation=td["truncation"],
                 termination=termination,
@@ -234,6 +237,8 @@ class Agent(nn.Module):
         
         if not debug:
             logger.log_network_loss(policy_loss, v_loss, entropy_loss)
+        else:
+            print(f"Policy Loss | {policy_loss} | Value Loss | {v_loss} | Entropy Loss | {entropy_loss}")
 
         return policy_loss + v_loss + entropy_loss
 
@@ -278,7 +283,7 @@ def eval_unroll(
     frames = []
     num_resets = 1
     for i in range(length):
-        logits, action = get_agent_actions(agents, observation, env.obs_dims)
+        _, action = get_agent_actions(agents, observation, env.obs_dims)
         if get_jax_state:
             jax_state, observation, reward, done, _ = env.step(
                 Agent.dist_postprocess(action)
@@ -309,18 +314,15 @@ def get_obs(obs, dims: Tuple[int], num_agents: int):
     start_idx = 0
     chunks = []
     for dim in dims:
-        if len(obs.shape) == 1:
+        if num_agents == 1:
             chunk_size = dim * num_agents
-            chunk = torch.reshape(
-                obs[start_idx : start_idx + chunk_size], (num_agents, dim)
-            )
+            breakpoint()
+            chunk = torch.reshape(obs[start_idx : start_idx + chunk_size], (num_agents, dim))
             chunks.append(chunk)
             start_idx += chunk_size
-        elif len(obs.shape) > 1:
+        elif num_agents > 1:
             chunk_size = dim * num_agents
-            chunk = torch.reshape(
-                obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)
-            ).swapaxes(0, 1)
+            chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
             chunks.append(chunk)
             start_idx += chunk_size
     if len(obs.shape) == 1:
@@ -330,22 +332,26 @@ def get_obs(obs, dims: Tuple[int], num_agents: int):
             0, 1
         )  # Parallized Enviroments [#envs, #num_agents, obs]
 
-
 def get_agent_actions(
     agents: List[Agent], observation: torch.Tensor, dims: Tuple[int]
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     num_agents = len(agents)
-    obs = get_obs(observation, dims, num_agents)  # [#num_agents, obs]
+    if len(observation.shape) == 1:
+        observation = observation.reshape(1, -1)
+    if len(agents) > 1:
+        obs = get_obs(observation, dims, num_agents)  # [#num_agents, obs]
+    else:
+        obs = observation
     logits, actions = [], []
     for idx, agent in enumerate(agents):
-        if len(obs) == 2:
-            logit, action = agent.get_logits_action(obs[idx, :])
+        if len(obs.shape) == 2:
+            logit, action = agent.get_logits_action(obs)
         else:
             logit, action = agent.get_logits_action(obs[:, idx, :])
         logits.append(logit)
         actions.append(action)
-    if len(obs) == 2:
-        return torch.concatenate(logits, axis=0), torch.concatenate(actions, axis=0)
+    if len(agents) == 1:
+        return logits[0], actions[0]
     else:
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
@@ -466,11 +472,11 @@ def train(
     # create the agent
     policy_layers = [
         sum(env.obs_dims),
-        128,
-        128,
+        64,
+        64,
         env.action_space.shape[-1] * 2,
     ]
-    value_layers = [sum(env.obs_dims), 128, 128, 1]
+    value_layers = [sum(env.obs_dims), 64, 64, 1]
     network_arch = {
         "policy_layers": policy_layers,
         "value_layers": value_layers,
@@ -484,7 +490,10 @@ def train(
     for agent_idx in range(env.num_agents):
         agents.append(Agent(**network_arch).to(device))
         optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
-
+    # agents = [agent.train() for agent in agents]
+    # breakpoint()
+    # agents = [torch.jit.script(agent) for agent in agents]
+    # breakpoint()
     sps = 0
     total_steps = 0
     total_loss = 0
@@ -508,7 +517,7 @@ def train(
             }
             if not debug:
                 logger.log_eval(episode_reward=episode_reward.cpu().item(), sps=sps, eval_sps=eval_sps, total_loss=total_loss)
-            progress_fn(total_steps, progress)
+            # progress_fn(total_steps, progress)
             if episode_reward >= eval_reward_limit:
                 break
 
