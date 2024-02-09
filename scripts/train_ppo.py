@@ -5,13 +5,15 @@ import wandb
 import matplotlib.pyplot as plt
 
 from Humanoid_MARL.agent.ppo.train_torch import train
+from Humanoid_MARL.utils.logger import WandbLogger
 
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
+    project_name = "debug"
     config = {
-        'num_timesteps': 200_000_000,
-        'eval_reward_limit' : 10_000,
+        'num_timesteps': 100_000_000,
+        'eval_reward_limit' : 6000,
         'eval_frequency': 100,
         'episode_length': 1000,
         'unroll_length': 10,
@@ -22,7 +24,7 @@ def main():
         'entropy_cost': 1e-3,
         'num_envs': 2048,
         'batch_size': 512,
-        'env_name': "humanoids",
+        'env_name': "humanoid",
         'render' : False,
         'device' : 'cuda',
         'debug' : False,
@@ -31,8 +33,8 @@ def main():
     # ================ Config ================
     # ================ Logging ===============
     if not config['debug']:
-        wandb.init(project="MARL-Humanoids",
-                    config=config)
+        logger = WandbLogger(project_name, config=config)
+        config['logger'] = logger
     # ================ Progress Function ================
     xdata = []
     ydata = []

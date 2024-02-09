@@ -129,7 +129,7 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         self.backend = backend
         self._state = None
 
-        self.num_agents = env.num_humaniods
+        self.num_agents = env.num_humanoids
         obs = np.inf * np.ones(
             self._env.observation_size // self.num_agents, dtype="float32"
         )

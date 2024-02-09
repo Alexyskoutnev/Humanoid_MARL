@@ -4,9 +4,9 @@ from datetime import datetime
 
 SAVE_MODELS = "./models"
 
-def save_models(agents, network_arch, type="ppo"):
+def save_models(agents, network_arch, type="ppo", env="humanoid"):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    timestamped_name = f"{timestamp}_{type}.pt"
+    timestamped_name = f"{timestamp}_{type}_{env}.pt"
     filename = os.path.join(SAVE_MODELS, timestamped_name)
     state_dicts = {"network_arch": network_arch}
     for i, agent in enumerate(agents):

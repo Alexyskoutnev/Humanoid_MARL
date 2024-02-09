@@ -24,8 +24,9 @@ import cProfile
 import torch
 import numpy as np
 
-#Debugging Flags
+# Debugging Flags
 from jax import config
+
 # config.update("jax_debug_nans", True) #Throw NaN if they happen
 # config.update("jax_disable_jit", True) #Disable JIT [remove this if you want speed]
 
@@ -178,13 +179,14 @@ class Humanoid(PipelineEnv):
 
     def __init__(
         self,
-        forward_reward_weight=1.25,
+        forward_reward_weight=2.25,
         ctrl_cost_weight=0.1,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
+        include_standing_up_cost=False,
         backend="generalized",
         visual="brax",
         num_humanoids=2,
@@ -203,7 +205,7 @@ class Humanoid(PipelineEnv):
             self.renderer = mujoco.Renderer(mj_model)
 
         n_frames = 5
-        self.num_humaniods = num_humanoids
+        self.num_humanoids = num_humanoids
         self._dims = None
         if exclude_current_positions_from_observation:
             self._position_dim = 20
@@ -256,6 +258,7 @@ class Humanoid(PipelineEnv):
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
+        self._standup_reward = include_standing_up_cost
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -274,12 +277,13 @@ class Humanoid(PipelineEnv):
         obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
         done, _ = jp.zeros(2)
         zero_init = jp.zeros(2)
-        reward = jp.zeros(self.num_humaniods)
+        reward = jp.zeros(self.num_humanoids)
         metrics = {
             "forward_reward": zero_init,
             "reward_linvel": zero_init,
             "reward_quadctrl": zero_init,
             "reward_alive": zero_init,
+            "standup_reward": zero_init,
             "x_position": zero_init,
             "y_position": zero_init,
             "distance_from_origin": zero_init,
@@ -298,8 +302,16 @@ class Humanoid(PipelineEnv):
         is_healthy_2_test = is_healthy_2.astype(jp.int32)
         return (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
 
+    def _stand_up_rewards(self, pipeline_state):
+        uph_cost_h1 = pipeline_state.x.pos[0, 2] / self.dt
+        uph_cost_h2 = pipeline_state.x.pos[11, 2] / self.dt
+        return jp.concatenate([uph_cost_h1.reshape(-1), uph_cost_h2.reshape(-1)])
+
     def _control_reward(self, action):
-        action = reshape_vector(action, (self.num_humaniods, action.shape[0] // self.num_humaniods),)
+        action = reshape_vector(
+            action,
+            (self.num_humanoids, action.shape[0] // self.num_humanoids),
+        )
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
 
@@ -309,7 +321,7 @@ class Humanoid(PipelineEnv):
             return 1.0
         else:
             return 0.0
-        
+
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -320,20 +332,34 @@ class Humanoid(PipelineEnv):
         velocity = (com_after - com_before) / self.dt
         forward_reward = self._forward_reward_weight * velocity[:, 0]
 
+        if self._standup_reward:
+            uph_cost = self._stand_up_rewards(pipeline_state)
+        else:
+            uph_cost = jp.zeros(2)
+
         min_z, max_z = self._healthy_z_range
         is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
         if self._terminate_when_unhealthy:
-            healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods) * (is_healthy)
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_humanoids) * (is_healthy)
+            )
         else:
-            healthy_reward = self._healthy_reward * is_healthy
-            
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_humanoids) * is_healthy
+            )
+
         ctrl_cost = self._control_reward(action)
-        
+
         obs = self._get_obs(pipeline_state, action)
-        reward = forward_reward + healthy_reward - ctrl_cost
+        reward = forward_reward + healthy_reward - ctrl_cost + uph_cost
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
-        
-        humanoids_z = jp.concatenate([pipeline_state.x.pos[0, 2].reshape(-1), pipeline_state.x.pos[11, 2].reshape(-1)])  
+
+        humanoids_z = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 2].reshape(-1),
+                pipeline_state.x.pos[11, 2].reshape(-1),
+            ]
+        )
 
         state.metrics.update(
             forward_reward=forward_reward,
@@ -345,10 +371,13 @@ class Humanoid(PipelineEnv):
             distance_from_origin=jp.linalg.norm(com_after, axis=1),
             x_velocity=velocity[:, 0],
             y_velocity=velocity[:, 1],
-            z_position=humanoids_z
+            z_position=humanoids_z,
+            standup_reward=uph_cost,
         )
 
-        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
+        return state.replace(
+            pipeline_state=pipeline_state, obs=obs, reward=reward, done=done
+        )
 
     def _flatten(self, x):
         return jp.ravel(x)
@@ -359,20 +388,26 @@ class Humanoid(PipelineEnv):
         velocity = pipeline_state.qd
 
         if self._exclude_current_positions_from_observation:
-            indices_to_remove = np.array([0, 1, 24, 25]) #Removing CoM x-y for humanoid 1 and 2
-            position = position[np.logical_not(np.isin(np.arange(len(position)), indices_to_remove))]
-    
+            indices_to_remove = np.array(
+                [0, 1, 24, 25]
+            )  # Removing CoM x-y for humanoid 1 and 2
+            position = position[
+                np.logical_not(np.isin(np.arange(len(position)), indices_to_remove))
+            ]
+
         com, inertia, mass_sum, x_i = self._com(pipeline_state)
 
-        if self.num_humaniods == 1:
+        if self.num_humanoids == 1:
             com, inertia, mass_sum, x_i = self._com(pipeline_state)
             cinr = x_i.replace(pos=x_i.pos - com).vmap().do(inertia)
-        elif self.num_humaniods > 1:
-            com = reshape_vector(com, (self.num_humaniods, 1, -1))
-            x_i_pos = reshape_vector(x_i.pos, (self.num_humaniods, -1, 3))
+        elif self.num_humanoids > 1:
+            com = reshape_vector(com, (self.num_humanoids, 1, -1))
+            x_i_pos = reshape_vector(x_i.pos, (self.num_humanoids, -1, 3))
             pos_replace = reshape_vector(self._flatten(x_i_pos - com), (-1, 3))
             cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
-            mass_sum = self._flatten(mass_sum[0])  # double check that mass_sum arent different btw the two robots
+            mass_sum = self._flatten(
+                mass_sum[0]
+            )  # double check that mass_sum arent different btw the two robots
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -412,23 +447,25 @@ class Humanoid(PipelineEnv):
                 ),
                 mass=inertia.mass ** (1 - self.sys.spring_mass_scale),
             )
-        if (self.num_humaniods) == 1:
+        if (self.num_humanoids) == 1:
             mass_sum = jp.sum(inertia.mass)
             x_i = pipeline_state.x.vmap().do(inertia.transform)
             com = (
                 jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
             )
         else:
-            inertia_mass = reshape_vector(inertia.mass, (self.num_humaniods, -1, 1))
+            inertia_mass = reshape_vector(inertia.mass, (self.num_humanoids, -1, 1))
             mass_sum = jp.sum(inertia_mass, axis=1)
             x_i = pipeline_state.x.vmap().do(inertia.transform)
-            x_i_pos = reshape_vector(x_i.pos, (self.num_humaniods, -1, 3))
-            com = jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / reshape_vector(mass_sum, (-1, 1))
+            x_i_pos = reshape_vector(x_i.pos, (self.num_humanoids, -1, 3))
+            com = jp.sum(
+                jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1
+            ) / reshape_vector(mass_sum, (-1, 1))
         return com, inertia, mass_sum, x_i
 
     @property
     def dims(self):
-        action_dim = int(self.sys.act_size() / self.num_humaniods)
+        action_dim = int(self.sys.act_size() / self.num_humanoids)
         return (
             self._position_dim,
             self._velocity_dim,
@@ -453,18 +490,20 @@ class Humanoid(PipelineEnv):
 
     @property
     def action_space(self):
-        return 17 * self.num_humaniods
+        return 17 * self.num_humanoids
 
-@ft.partial(jax.jit, static_argnums=1) 
+
+@ft.partial(jax.jit, static_argnums=1)
 def reshape_vector(vector, target_shape):
     return jp.reshape(vector, target_shape)
 
+
 if __name__ == "__main__":
-    #===============Config===============
+    # ===============Config===============
     device = "cuda"
     num_envs = 2048
     episode_length = 1000
-    #===============Config===============
+    # ===============Config===============
     env_name = "humanoids"
     env = envs.create(
         env_name,
@@ -476,5 +515,10 @@ if __name__ == "__main__":
     env = torch_wrapper.TorchWrapper(env, device=device)
     obs = env.reset()
 
-    action = torch.ones((env.action_space.shape[0], env.action_space.shape[1] * 2)).to(device) * 2
+    action = (
+        torch.ones((env.action_space.shape[0], env.action_space.shape[1] * 2)).to(
+            device
+        )
+        * 2
+    )
     env.step(action)
