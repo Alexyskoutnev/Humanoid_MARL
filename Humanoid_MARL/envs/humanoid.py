@@ -21,8 +21,10 @@ from brax import base
 from brax.envs.base import PipelineEnv, State
 from brax.io import mjcf
 from etils import epath
+import os
 import jax
 from jax import numpy as jp
+from Humanoid_MARL import PACKAGE_ROOT
 
 
 class Humanoid(PipelineEnv):
@@ -184,8 +186,9 @@ class Humanoid(PipelineEnv):
         backend="generalized",
         **kwargs,
     ):
-        path = epath.resource_path("brax") / "envs/assets/humanoid.xml"
-        sys = mjcf.load(path)
+        # path = epath.resource_path("brax") / "envs/assets/humanoid.xml"
+        humanoid_1_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_1.xml")
+        sys = mjcf.load(humanoid_1_path)
 
         n_frames = 5
 
