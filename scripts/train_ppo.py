@@ -10,26 +10,49 @@ from Humanoid_MARL.utils.logger import WandbLogger
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
-    project_name = "debug"
-    config = {
-        'num_timesteps': 100_000_000,
-        'eval_reward_limit' : 5000,
-        'eval_frequency': 100,
-        'episode_length': 1000,
-        'unroll_length': 10,
-        'num_minibatches': 32,
-        'num_update_epochs': 8,
-        'discounting': 0.97,
-        'learning_rate': 3e-4,
-        'entropy_cost': 1e-3,
-        'num_envs': 2048,
-        'batch_size': 512,
-        'env_name': "humanoids",
-        'render' : False,
-        'device' : 'cuda',
-        'debug' : True,
-        'device_idx' : gpu_index
-    }
+    env_name = "humanoids"
+    project_name = f"single_agent_ppo_{env_name}"
+    debug = False
+    if not debug:
+        config = {
+            'num_timesteps': 200_000_000,
+            'eval_reward_limit' : 15_000,
+            'eval_frequency': 100,
+            'episode_length': 1000,
+            'unroll_length': 10,
+            'num_minibatches': 32,
+            'num_update_epochs': 8,
+            'discounting': 0.97,
+            'learning_rate': 3e-4,
+            'entropy_cost': 1e-3,
+            'num_envs': 2048,
+            'batch_size': 512,
+            'env_name': env_name,
+            'render' : False,
+            'device' : 'cuda',
+            'debug' : False,
+            'device_idx' : gpu_index
+        }
+    else:
+        config = {
+            'num_timesteps': 200_00,
+            'eval_reward_limit' : 15_000,
+            'eval_frequency': 100,
+            'episode_length': 1000,
+            'unroll_length': 1,
+            'num_minibatches': 1,
+            'num_update_epochs': 1,
+            'discounting': 0.97,
+            'learning_rate': 3e-4,
+            'entropy_cost': 1e-3,
+            'num_envs': 2,
+            'batch_size': 32,
+            'env_name': "humanoid",
+            'render' : False,
+            'device' : 'cuda',
+            'debug' : True,
+            'device_idx' : gpu_index
+        }
     # ================ Config ================
     # ================ Logging ===============
     if not config['debug']:
@@ -58,7 +81,10 @@ def main():
         PLT_SAVE_PATH = os.path.join(path, timestamped_name)
         plt.savefig(PLT_SAVE_PATH)
     # ================ Progress Function ================
-    train(**config, progress_fn=progress)
+    if debug:
+        train(**config, progress_fn=None)
+    else:
+        train(**config, progress_fn=progress)
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
     print(f"eval steps/sec: {np.mean(eval_sps)}")

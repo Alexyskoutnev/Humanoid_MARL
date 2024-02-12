@@ -26,7 +26,9 @@ from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.utils.logger import WandbLogger
-os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'platform'
+
+
+# os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'platform'
 
 
 StepData = collections.namedtuple(
@@ -113,7 +115,7 @@ class Agent(nn.Module):
         return log_prob.sum(dim=-1)
 
     @torch.jit.export
-    def update_normalization(self, observation :torch) -> None:
+    def update_normalization(self, observation : torch.Tensor) -> None:
         self.num_steps += observation.shape[0] * observation.shape[1]
         input_to_old_mean = observation - self.running_mean
         mean_diff = torch.sum(input_to_old_mean / self.num_steps, dim=(0, 1))
@@ -137,8 +139,11 @@ class Agent(nn.Module):
         return logits, action
 
     @torch.jit.export
-    def compute_gae(self, truncation, termination, reward, values, bootstrap_value):
-        breakpoint()
+    def compute_gae(self, truncation : torch.Tensor,
+                    termination : torch.Tensor,
+                    reward : torch.Tensor,
+                    values : torch.Tensor,
+                    bootstrap_value : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         truncation_mask = 1 - truncation
         # Append bootstrapped value to get [v1, ..., v_t+1]
         values_t_plus_1 = torch.cat(
@@ -174,7 +179,9 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int, debug : bool = False, logger : Optional[WandbLogger] = None):
-        observation = self.normalize(td["observation"][:, :, agent_idx, :])
+        
+        td_obs = td["observation"][:, :, agent_idx, :]
+        observation = self.normalize(td_obs)
         policy_logits = self.policy(observation[:-1])
         baseline = self.value(observation)
         baseline = torch.squeeze(baseline, dim=-1)
@@ -214,7 +221,6 @@ class Agent(nn.Module):
         target_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
 
         with torch.no_grad():
-            breakpoint()
             vs, advantages = self.compute_gae(
                 truncation=td["truncation"],
                 termination=termination,
@@ -239,7 +245,7 @@ class Agent(nn.Module):
             logger.log_network_loss(policy_loss, v_loss, entropy_loss)
         else:
             print(f"Policy Loss | {policy_loss} | Value Loss | {v_loss} | Entropy Loss | {entropy_loss}")
-
+            
         return policy_loss + v_loss + entropy_loss
 
 
@@ -314,17 +320,16 @@ def get_obs(obs, dims: Tuple[int], num_agents: int):
     start_idx = 0
     chunks = []
     for dim in dims:
-        if num_agents == 1:
-            chunk_size = dim * num_agents
-            breakpoint()
-            chunk = torch.reshape(obs[start_idx : start_idx + chunk_size], (num_agents, dim))
-            chunks.append(chunk)
-            start_idx += chunk_size
-        elif num_agents > 1:
-            chunk_size = dim * num_agents
-            chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
-            chunks.append(chunk)
-            start_idx += chunk_size
+        # if num_agents == 1:
+        #     chunk_size = dim * num_agents
+        #     chunk = torch.reshape(obs[start_idx : start_idx + chunk_size], (num_agents, dim))
+        #     chunks.append(chunk)
+        #     start_idx += chunk_size
+        # elif num_agents > 1:
+        chunk_size = dim * num_agents
+        chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
+        chunks.append(chunk)
+        start_idx += chunk_size
     if len(obs.shape) == 1:
         return torch.concatenate(chunks, axis=1)  # Assuming only 1 enviroment [obs]
     elif len(obs.shape) >= 1:
@@ -334,25 +339,27 @@ def get_obs(obs, dims: Tuple[int], num_agents: int):
 
 def get_agent_actions(
     agents: List[Agent], observation: torch.Tensor, dims: Tuple[int]
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+
     num_agents = len(agents)
-    if len(observation.shape) == 1:
-        observation = observation.reshape(1, -1)
-    if len(agents) > 1:
-        obs = get_obs(observation, dims, num_agents)  # [#num_agents, obs]
-    else:
-        obs = observation
-    logits, actions = [], []
-    for idx, agent in enumerate(agents):
-        if len(obs.shape) == 2:
-            logit, action = agent.get_logits_action(obs)
-        else:
-            logit, action = agent.get_logits_action(obs[:, idx, :])
-        logits.append(logit)
-        actions.append(action)
-    if len(agents) == 1:
-        return logits[0], actions[0]
-    else:
+    if num_agents == 1:
+        agent = agents[0]
+        if len(observation.shape) == 1: # Used for single enviroment for evaluation
+            observation = observation.reshape(1, -1)
+        logit, action = agent.get_logits_action(observation)
+        return logit, action
+    elif num_agents > 1:
+        if len(observation.shape) == 1: # Used for single enviroment for evaluation
+            observation = observation.reshape(1, -1)
+        observation = get_obs(observation, dims, num_agents)  # [#envs, #num_agents, obs]
+        logits, actions = [], []
+        for idx, agent in enumerate(agents):
+            if len(observation.shape) == 2:
+                logit, action = agent.get_logits_action(observation)
+            else:
+                logit, action = agent.get_logits_action(observation[:, idx, :])
+            logits.append(logit)
+            actions.append(action)
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
 
@@ -387,9 +394,13 @@ def update_normalization(
 ) -> None:
     num_agents = len(agents)
     observation = observation.view(observation.shape[0] * observation.shape[1], -1)
-    obs = get_obs(observation, dims, num_agents)
-    for idx, agent in enumerate(agents):
-        agent.update_normalization(obs[:, idx, :])
+    if len(observation.shape) == 1:
+        agent = agents[0]
+        agent.update_normalization(observation)
+    else:
+        obs = get_obs(observation, dims, num_agents)
+        for idx, agent in enumerate(agents):
+            agent.update_normalization(obs[:, idx, :])
 
 
 def unroll_first(data):
@@ -490,7 +501,7 @@ def train(
     for agent_idx in range(env.num_agents):
         agents.append(Agent(**network_arch).to(device))
         optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
-    # agents = [agent.train() for agent in agents]
+    agents = [agent.train() for agent in agents]
     # breakpoint()
     # agents = [torch.jit.script(agent) for agent in agents]
     # breakpoint()
