@@ -4,7 +4,7 @@ import functools
 from typing import Optional, Type
 
 from Humanoid_MARL.envs import test_env
-from Humanoid_MARL.envs import humanoids, humanoid
+from Humanoid_MARL.envs import humanoids, humanoid, ant
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
 from Humanoid_MARL.envs.wrappers import VmapWrapper
@@ -14,6 +14,8 @@ _envs = {
     'test': test_env.Humanoid,
     'humanoids': humanoids.Humanoid,
     'humanoid': humanoid.Humanoid,
+    'ant': ant.Ant,
+    'ants' : None,
 }
 
 

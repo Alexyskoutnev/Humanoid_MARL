@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, Optional, Sequence
 import brax
 
 from Humanoid_MARL import envs
+from Humanoid_MARL.utils.utils import seed_everything
 from brax.envs.wrappers import gym as gym_wrapper
 from brax.envs.wrappers import torch as torch_wrapper
 from brax.io import metrics
@@ -22,6 +23,8 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 
+SEED = 1
+seed_everything(SEED)
 
 class Agent(nn.Module):
     """Standard PPO Agent with GAE and observation normalization."""
@@ -247,18 +250,18 @@ def train_unroll(agent, env, observation, num_unrolls, unroll_length):
 
 
 def train(
-    env_name: str = "ant",
-    num_envs: int = 4,
-    episode_length: int = 10,
+    env_name: str = "humanoid",
+    num_envs: int = 2028,
+    episode_length: int = 1000,
     device: str = "cuda",
-    num_timesteps: int = 30_000_000,
+    num_timesteps: int = 150_000_000,
     eval_frequency: int = 10,
-    unroll_length: int = 2,
-    batch_size: int = 4,
-    num_minibatches: int = 2,
+    unroll_length: int = 5,
+    batch_size: int = 512,
+    num_minibatches: int = 32,
     num_update_epochs: int = 4,
     reward_scaling: float = 0.1,
-    entropy_cost: float = 1e-2,
+    entropy_cost: float = 1e-3,
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
@@ -272,7 +275,7 @@ def train(
     env = torch_wrapper.TorchWrapper(env, device=device)
 
     # env warmup
-    env.reset()
+    obs = env.reset()
     action = torch.zeros(env.action_space.shape).to(device)
     env.step(action)
 
@@ -319,9 +322,6 @@ def train(
         num_steps = batch_size * num_minibatches * unroll_length #
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         num_unrolls = batch_size * num_minibatches // env.num_envs
-
-        num_unrolls = 2
-        unroll_length = 3
 
         total_loss = 0
         t = time.time()
@@ -373,10 +373,12 @@ def train(
                     # td_minibatch.observation.shape | [unroll_length, batch_size, env.obs_dim] | torch.Size([6, 1024, 244]) # 1024 batch for each step of the simulator
                     # ========================== Important State INFO  ==========================
                     loss = agent.loss(td_minibatch._asdict())
+                    # print(f"mini_loss [{minibatch_i}] | {loss}")
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
                     total_loss += loss
+                # print(f"loss [{_}] | {total_loss}")
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
@@ -385,7 +387,6 @@ def train(
 
 
 if __name__ == "__main__":
-    os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 
     env_name = "humanoid"
 
@@ -407,8 +408,22 @@ if __name__ == "__main__":
         plt.ylabel("reward per episode")
         plt.plot(xdata, ydata)
         plt.show()
-
-    train(env_name=env_name, progress_fn=progress)
+    config = {
+            'num_timesteps': 150_000_000,
+            'eval_frequency': 100,
+            'episode_length': 1000,
+            'unroll_length': 10,
+            'num_minibatches': 32,
+            'num_update_epochs': 8,
+            'discounting': 0.97,
+            'learning_rate': 3e-4,
+            'entropy_cost': 2e-3,
+            'num_envs': 2048,
+            'batch_size': 512,
+            'env_name': env_name,
+            'device' : 'cuda'
+    }
+    train(**config, progress_fn=progress)
 
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
