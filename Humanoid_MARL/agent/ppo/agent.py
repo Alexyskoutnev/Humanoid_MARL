@@ -47,7 +47,7 @@ class Agent(nn.Module):
         self.device = device
 
     @torch.jit.export
-    def dist_create(self, logits : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def dist_create(self, logits: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Normal followed by tanh.
 
         torch.distribution doesn't work with torch.jit, so we roll our own."""
@@ -56,15 +56,17 @@ class Agent(nn.Module):
         return loc, scale
 
     @torch.jit.export
-    def dist_sample_no_postprocess(self, loc : torch.Tensor, scale : torch.Tensor) -> torch.Tensor:
+    def dist_sample_no_postprocess(
+        self, loc: torch.Tensor, scale: torch.Tensor
+    ) -> torch.Tensor:
         return torch.normal(loc, scale)
 
     @classmethod
-    def dist_postprocess(cls, x : torch.Tensor) -> torch.Tensor:
+    def dist_postprocess(cls, x: torch.Tensor) -> torch.Tensor:
         return torch.tanh(x)
 
     @torch.jit.export
-    def dist_entropy(self, loc : torch.Tensor, scale : torch.Tensor) -> torch.Tensor:
+    def dist_entropy(self, loc: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         entropy = 0.5 + log_normalized
         entropy = entropy * torch.ones_like(loc)
@@ -74,7 +76,9 @@ class Agent(nn.Module):
         return entropy.sum(dim=-1)
 
     @torch.jit.export
-    def dist_log_prob(self, loc : torch.Tensor, scale : torch.Tensor, dist : torch.Tensor) -> torch.Tensor:
+    def dist_log_prob(
+        self, loc: torch.Tensor, scale: torch.Tensor, dist: torch.Tensor
+    ) -> torch.Tensor:
         log_unnormalized = -0.5 * ((dist - loc) / scale).square()
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         log_det_jacobian = 2 * (math.log(2) - dist - F.softplus(-2 * dist))
@@ -82,7 +86,7 @@ class Agent(nn.Module):
         return log_prob.sum(dim=-1)
 
     @torch.jit.export
-    def update_normalization(self, observation : torch.Tensor) -> None:
+    def update_normalization(self, observation: torch.Tensor) -> None:
         self.num_steps += observation.shape[0] * observation.shape[1]
         input_to_old_mean = observation - self.running_mean
         mean_diff = torch.sum(input_to_old_mean / self.num_steps, dim=(0, 1))
@@ -92,13 +96,15 @@ class Agent(nn.Module):
         self.running_variance = self.running_variance + var_diff
 
     @torch.jit.export
-    def normalize(self, observation : torch.Tensor) -> torch.Tensor:
+    def normalize(self, observation: torch.Tensor) -> torch.Tensor:
         variance = self.running_variance / (self.num_steps + 1.0)
         variance = torch.clip(variance, 1e-6, 1e6)
         return ((observation - self.running_mean) / variance.sqrt()).clip(-5, 5)
 
     @torch.jit.export
-    def get_logits_action(self, observation : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_logits_action(
+        self, observation: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         observation = self.normalize(observation)
         logits = self.policy(observation)
         loc, scale = self.dist_create(logits)
@@ -106,11 +112,14 @@ class Agent(nn.Module):
         return logits, action
 
     @torch.jit.export
-    def compute_gae(self, truncation : torch.Tensor,
-                    termination : torch.Tensor,
-                    reward : torch.Tensor,
-                    values : torch.Tensor,
-                    bootstrap_value : torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def compute_gae(
+        self,
+        truncation: torch.Tensor,
+        termination: torch.Tensor,
+        reward: torch.Tensor,
+        values: torch.Tensor,
+        bootstrap_value: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         truncation_mask = 1 - truncation
         # Append bootstrapped value to get [v1, ..., v_t+1]
         values_t_plus_1 = torch.cat(
@@ -146,7 +155,6 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
-        
         td_obs = td["observation"][:, :, agent_idx, :]
         # breakpoint()
         observation = self.normalize(td_obs)
@@ -209,10 +217,10 @@ class Agent(nn.Module):
         # Entropy reward
         entropy = torch.mean(self.dist_entropy(loc, scale))
         entropy_loss = self.entropy_cost * -entropy
-        
+
         # if not debug:
         #     logger.log_network_loss(policy_loss, v_loss, entropy_loss)
         # else:
         #     print(f"Policy Loss | {policy_loss} | Value Loss | {v_loss} | Entropy Loss | {entropy_loss}")
-            
+
         return policy_loss + v_loss + entropy_loss
