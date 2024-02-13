@@ -6,16 +6,20 @@ import matplotlib.pyplot as plt
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
+from Humanoid_MARL.utils.utils import seed_everything
+
+SEED = 1
+seed_everything(SEED)
 
 def main():
-    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
     print(f"USING GPU {gpu_index}")
-    env_name = "humanoids"
-    project_name = f"single_agent_ppo_{env_name}"
+    env_name = "humanoid"
+    project_name = f"MARL_ppo_{env_name}"
     debug = False
     if not debug:
         config = {
-            'num_timesteps': 200_000_000,
+            'num_timesteps': 150_000_000,
             'eval_reward_limit' : 15_000,
             'eval_frequency': 100,
             'episode_length': 1000,
@@ -24,7 +28,7 @@ def main():
             'num_update_epochs': 8,
             'discounting': 0.97,
             'learning_rate': 3e-4,
-            'entropy_cost': 1e-3,
+            'entropy_cost': 2e-3,
             'num_envs': 2048,
             'batch_size': 512,
             'env_name': env_name,
@@ -33,21 +37,40 @@ def main():
             'debug' : False,
             'device_idx' : gpu_index
         }
+        # config = {
+        #     'num_timesteps': 50_000_000,
+        #     'eval_reward_limit' : 10_000,
+        #     'eval_frequency': 100,
+        #     'episode_length': 1000,
+        #     'unroll_length': 10,
+        #     'num_minibatches': 32,
+        #     'num_update_epochs': 8,
+        #     'discounting': 0.97,
+        #     'learning_rate': 3e-4,
+        #     'entropy_cost': 2e-3,
+        #     'num_envs': 2048,
+        #     'batch_size': 512,
+        #     'env_name': env_name,
+        #     'render' : False,
+        #     'device' : 'cuda',
+        #     'debug' : True,
+        #     'device_idx' : gpu_index
+        # }
     else:
         config = {
-            'num_timesteps': 200_00,
+            'num_timesteps': 200_000,
             'eval_reward_limit' : 15_000,
             'eval_frequency': 100,
             'episode_length': 1000,
             'unroll_length': 1,
-            'num_minibatches': 1,
+            'num_minibatches': 8,
             'num_update_epochs': 1,
             'discounting': 0.97,
             'learning_rate': 3e-4,
             'entropy_cost': 1e-3,
-            'num_envs': 2,
-            'batch_size': 32,
-            'env_name': "humanoid",
+            'num_envs': 4,
+            'batch_size': 64,
+            'env_name': env_name,
             'render' : False,
             'device' : 'cuda',
             'debug' : True,

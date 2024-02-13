@@ -179,7 +179,7 @@ class Humanoid(PipelineEnv):
         forward_reward_weight=1.25,
         ctrl_cost_weight=0.1,
         healthy_reward=5.0,
-        terminate_when_unhealthy=False,
+        terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.0),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
@@ -187,7 +187,7 @@ class Humanoid(PipelineEnv):
         **kwargs,
     ):
         # path = epath.resource_path("brax") / "envs/assets/humanoid.xml"
-        humanoid_1_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_1.xml")
+        humanoid_1_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_no_collision.xml") # default XML file from Google
         sys = mjcf.load(humanoid_1_path)
 
         n_frames = 5
@@ -223,6 +223,7 @@ class Humanoid(PipelineEnv):
         super().__init__(sys=sys, backend=backend, **kwargs)
 
         self.num_humanoids = 1
+        self.num_agents = 1
         self._forward_reward_weight = forward_reward_weight
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward

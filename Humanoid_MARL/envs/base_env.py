@@ -129,14 +129,17 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         self.backend = backend
         self._state = None
 
-        self.num_agents = env.num_humanoids
+        self.num_agents = env.num_agents or 1
         obs = np.inf * np.ones(
             self._env.observation_size // self.num_agents, dtype="float32"
         )
         obs_space = spaces.Box(-obs, obs, dtype="float32")
         self.observation_space = utils.batch_space(obs_space, self.num_envs)
-        self.obs_dims = env.obs_dims
-
+        if hasattr(env, 'obs_dim'):
+            self.obs_dims = env.obs_dims
+        else:
+            self.obs_dims = env.observation_size // self.num_agents
+            
         action = jax.tree_map(np.array, self._env.sys.actuator.ctrl_range)
         self.num_actuators = len(self._env.sys.actuator.ctrl_range) // self.num_agents
         action_space = spaces.Box(
@@ -145,7 +148,10 @@ class VectorGymWrapper(gym.vector.VectorEnv):
             dtype="float32",
         )
         self.action_space = utils.batch_space(action_space, self.num_envs)
-        self.action_dim = env.action_dim
+        if hasattr(env, 'action_dim'):
+            self.action_dim = env.action_dim
+        else:
+            self.action_dim  = env.action_size // self.num_agents
 
         def reset(key):
             key1, key2 = jax.random.split(key)
