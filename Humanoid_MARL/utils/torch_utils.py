@@ -12,6 +12,7 @@ def save_models(agents, network_arch, type="ppo", env="humanoid"):
     for i, agent in enumerate(agents):
         state_dicts[f'agent_{i}'] = agent.state_dict()
     torch.save(state_dicts, filename)
+    print(f"Agent Weights {agent.state_dict()}")
     print(f"Agents saved to {filename}")
 
 def load_models(filename, agent_class, device: str = 'cpu'):
@@ -21,6 +22,7 @@ def load_models(filename, agent_class, device: str = 'cpu'):
     for i in range(len(state_dicts) - 1):  # Subtract 1 to exclude the network_arch entry
         agent = agent_class(**network_arch).to(device)
         agent.load_state_dict(state_dicts[f'agent_{i}'])
+        agent.eval()
         agents.append(agent)
 
     print(f"Models loaded from {filename}")

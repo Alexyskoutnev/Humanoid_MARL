@@ -15,13 +15,13 @@ def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
     print(f"USING GPU {gpu_index}")
     env_name = "humanoid"
-    project_name = f"MARL_ppo_{env_name}"
+    project_name = f"MARL_ppo_{env_name}_debug"
     debug = False
     if not debug:
         config = {
-            'num_timesteps': 150_000_000,
+            'num_timesteps': 50_000_000,
             'eval_reward_limit' : 15_000,
-            'eval_frequency': 100,
+            'eval_frequency': 10,
             'episode_length': 1000,
             'unroll_length': 10,
             'num_minibatches': 32,
@@ -32,7 +32,6 @@ def main():
             'num_envs': 2048,
             'batch_size': 512,
             'env_name': env_name,
-            'render' : False,
             'device' : 'cuda',
             'debug' : False,
             'device_idx' : gpu_index
@@ -60,7 +59,7 @@ def main():
         config = {
             'num_timesteps': 200_000,
             'eval_reward_limit' : 15_000,
-            'eval_frequency': 100,
+            'eval_frequency': 10,
             'episode_length': 1000,
             'unroll_length': 1,
             'num_minibatches': 8,

@@ -166,5 +166,5 @@ thirdparty
 
 /data/*
 */log/*
-/wandb/
+**/wandb/**
 **/models/*

@@ -40,6 +40,7 @@ StepData = collections.namedtuple(
 class SavingModelException(Exception):
     pass
 
+
 def sd_map(f: Callable[..., torch.Tensor], *sds) -> StepData:
     """Map a function over each field in StepData."""
     items = {}
@@ -69,8 +70,6 @@ def eval_unroll(
     env: Union[VectorGymWrapper, GymWrapper],
     length: int = 1000,
     device: str = "cpu",
-    render: bool = False,
-    video_length: int = 100,
     get_jax_state: bool = False,
 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
@@ -89,25 +88,14 @@ def eval_unroll(
             observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
-        if render and i < video_length:
-            print(f"image count | {i} / {video_length}")
-            img = (
-                env.render()
-            )  # TODO: figure why the this is so slow (slows down the RL-Pipeline)
-            frames.append(img)
-    if render:
-        try:
-            save_video(frames)
-        except:
-            print("Failed to save video")
     if get_jax_state:
         return episodes, episode_reward / episodes, jax_state
     else:
         return episodes, episode_reward / episodes
 
 
-def get_obs(obs : torch.Tensor, dims: Tuple[int], num_agents: int):
-    if type(dims) == int: #TODO: FIX THIS, just assume one type of observation for now
+def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int):
+    if type(dims) == int:  # TODO: FIX THIS, just assume one type of observation for now
         total_obs = dims
     else:
         total_obs = sum(dims)
@@ -115,7 +103,9 @@ def get_obs(obs : torch.Tensor, dims: Tuple[int], num_agents: int):
     chunks = []
     for dim in dims:
         chunk_size = dim * num_agents
-        chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1)
+        chunk = torch.reshape(
+            obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)
+        ).swapaxes(0, 1)
         chunks.append(chunk)
         start_idx += chunk_size
     if len(obs.shape) == 1:
@@ -125,21 +115,23 @@ def get_obs(obs : torch.Tensor, dims: Tuple[int], num_agents: int):
             0, 1
         )  # Parallized Enviroments [#envs, #num_agents, obs]
 
+
 def get_agent_actions(
     agents: List[Agent], observation: torch.Tensor, dims: Tuple[int]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-
+) -> Tuple[torch.Tensor, torch.Tensor]:
     num_agents = len(agents)
     if num_agents == 1:
         agent = agents[0]
-        if len(observation.shape) == 1: # Used for single enviroment for evaluation
+        if len(observation.shape) == 1:  # Used for single enviroment for evaluation
             observation = observation.reshape(1, -1)
         logit, action = agent.get_logits_action(observation)
         return logit, action
     elif num_agents > 1:
-        if len(observation.shape) == 1: # Used for single enviroment for evaluation
+        if len(observation.shape) == 1:  # Used for single enviroment for evaluation
             observation = observation.reshape(1, -1)
-        observation = get_obs(observation, dims, num_agents)  # [#envs, #num_agents, obs]
+        observation = get_obs(
+            observation, dims, num_agents
+        )  # [#envs, #num_agents, obs]
         logits, actions = [], []
         for idx, agent in enumerate(agents):
             if len(observation.shape) == 2:
@@ -151,7 +143,9 @@ def get_agent_actions(
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
 
-def train_unroll(agents, env, observation, num_unrolls, unroll_length, debug=False, logger=None):
+def train_unroll(
+    agents, env, observation, num_unrolls, unroll_length, debug=False, logger=None
+):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
     for _ in range(num_unrolls):
@@ -171,7 +165,7 @@ def train_unroll(agents, env, observation, num_unrolls, unroll_length, debug=Fal
         # Update the overall StepData structure by concatenating data from the current unroll
         sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
         if not debug:
-            logger.log_train(info=info, rewards=rewards, num_agents=len(agents))        
+            logger.log_train(info=info, rewards=rewards, num_agents=len(agents))
     # Apply torch.stack to each field in sd
     td = sd_map(torch.stack, sd)
     return observation, td
@@ -223,7 +217,9 @@ def reshape_minibatch(
     observation = epoch_td.reshape(-1, epoch_td.shape[3])
     if num_agents > 1:
         epoch_td = get_obs(observation, dims, num_agents)
-    epoch_td = epoch_td.reshape(*(minibatch_dim, unroll_length_dim, batch_size), num_agents, -1) #Might be wrong
+    epoch_td = epoch_td.reshape(
+        *(minibatch_dim, unroll_length_dim, batch_size), num_agents, -1
+    )  # Might be wrong
     return epoch_td[minibatch_idx, :, :, :, :]
 
 
@@ -243,12 +239,11 @@ def train(
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
     eval_reward_limit: float = 6500,
-    render: bool = False,
     debug: bool = False,
     device_idx: int = 0,
-    logger = None,
+    logger=None,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
-):
+) -> List[Agent]:
     """Trains a policy via PPO."""
     env = envs.create(
         env_name,
@@ -301,6 +296,7 @@ def train(
         optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
 
     agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # print(f"Agent Weights {agents[0].state_dict()}")
     sps = 0
     total_steps = 0
     total_loss = 0
@@ -309,7 +305,7 @@ def train(
             t = time.time()
             with torch.no_grad():
                 episode_count, episode_reward = eval_unroll(
-                    agents, env, episode_length, device, render=render
+                    agents, env, episode_length, device
                 )
             duration = time.time() - t
             episode_avg_length = env.num_envs * episode_length / episode_count
@@ -322,25 +318,37 @@ def train(
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
             }
-            # breakpoint()
             if not debug:
-                logger.log_eval(episode_reward=episode_reward.cpu().item(), sps=sps, eval_sps=eval_sps, total_loss=total_loss)
+                logger.log_eval(
+                    episode_reward=episode_reward.cpu().item(),
+                    sps=sps,
+                    eval_sps=eval_sps,
+                    total_loss=total_loss,
+                )
                 progress_fn(total_steps, progress)
             if episode_reward >= eval_reward_limit:
                 break
 
         if eval_i == eval_frequency:
             break
-
         observation = env.reset()
         num_steps = batch_size * num_minibatches * unroll_length
         num_epochs = num_timesteps // (num_steps * eval_frequency)
+        if num_epochs <= 0:
+            raise ValueError("num_timesteps too low for given batch size and unroll length")
         num_unrolls = batch_size * num_minibatches // env.num_envs
         total_loss = 0
         t = time.time()
         for num_epoch in range(num_epochs):
+            print(f"Current Epoch [{num_epoch}] / [{num_epochs}]")
             observation, td = train_unroll(
-                agents, env, observation, num_unrolls, unroll_length, debug=debug, logger=logger
+                agents,
+                env,
+                observation,
+                num_unrolls,
+                unroll_length,
+                debug=debug,
+                logger=logger,
             )
             td = sd_map(unroll_first, td)
             # update normalization statistics
@@ -377,7 +385,7 @@ def train(
                         total_loss += loss
                         epoch_loss += loss
                 print(f"loss [{update_epoch}] | {total_loss}")
-                        
+
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)
             print(f"epoch {num_epoch} : [{epoch_loss}]")
@@ -392,3 +400,4 @@ def train(
         save_models(agents, network_arch, env=env_name)
     except:
         raise SavingModelException
+    return agents
