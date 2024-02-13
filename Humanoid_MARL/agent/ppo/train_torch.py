@@ -340,7 +340,7 @@ def train(
         total_loss = 0
         t = time.time()
         for num_epoch in range(num_epochs):
-            print(f"Current Epoch [{num_epoch}] / [{num_epochs}]")
+            # print(f"Current Epoch [{num_epoch}] / [{num_epochs}]")
             observation, td = train_unroll(
                 agents,
                 env,
@@ -378,13 +378,13 @@ def train(
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                        print(f"mini_loss [{minibatch_i}] | {loss}")
+                        # print(f"mini_loss [{minibatch_i}] | {loss}")
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-                print(f"loss [{update_epoch}] | {total_loss}")
+                # print(f"loss [{update_epoch}] | {total_loss}")
 
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)
@@ -399,5 +399,6 @@ def train(
     try:
         save_models(agents, network_arch, env=env_name)
     except:
-        raise SavingModelException
+        pass
+        # raise SavingModelException
     return agents
