@@ -135,10 +135,13 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         )
         obs_space = spaces.Box(-obs, obs, dtype="float32")
         self.observation_space = utils.batch_space(obs_space, self.num_envs)
-        if hasattr(env, 'obs_dim'):
-            self.obs_dims = env.obs_dims
+
+        self.obs_dims = env.observation_size // self.num_agents
+        
+        if hasattr(env, 'obs_dims'):
+            self.obs_dims_tuple = env.obs_dims
         else:
-            self.obs_dims = env.observation_size // self.num_agents
+            self.obs_dims_tuple = None
             
         action = jax.tree_map(np.array, self._env.sys.actuator.ctrl_range)
         self.num_actuators = len(self._env.sys.actuator.ctrl_range) // self.num_agents

@@ -1,13 +1,13 @@
+from typing import Dict
 import os
 import torch
 from datetime import datetime
+from Humanoid_MARL.agent.ppo.agent import Agent
 
 SAVE_MODELS = "./models"
 
-def save_models(agents, network_arch, type="ppo", env="humanoid"):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    timestamped_name = f"{timestamp}_{type}_{env}.pt"
-    filename = os.path.join(SAVE_MODELS, timestamped_name)
+def save_models(agents : list[Agent], network_arch : Dict, model_name : str):
+    filename = os.path.join(SAVE_MODELS, model_name)
     state_dicts = {"network_arch": network_arch}
     for i, agent in enumerate(agents):
         state_dicts[f'agent_{i}'] = agent.state_dict()
@@ -15,7 +15,7 @@ def save_models(agents, network_arch, type="ppo", env="humanoid"):
     print(f"Agent Weights {agent.state_dict()}")
     print(f"Agents saved to {filename}")
 
-def load_models(filename, agent_class, device: str = 'cpu'):
+def load_models(filename, agent_class, device: str = 'cuda'):
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
     agents = []

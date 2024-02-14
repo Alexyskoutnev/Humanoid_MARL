@@ -28,9 +28,7 @@ from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
 
-
-# os.environ['XLA_PYTHON_CLIENT_ALLOCATOR'] = 'platform'
-
+SAVE_MODELS = "./models"
 
 StepData = collections.namedtuple(
     "StepData", ("observation", "logits", "action", "reward", "done", "truncation")
@@ -79,7 +77,7 @@ def eval_unroll(
     frames = []
     num_resets = 1
     for i in range(length):
-        _, action = get_agent_actions(agents, observation, env.obs_dims)
+        _, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
         if get_jax_state:
             jax_state, observation, reward, done, _ = env.step(
                 Agent.dist_postprocess(action)
@@ -151,7 +149,7 @@ def train_unroll(
     for _ in range(num_unrolls):
         one_unroll = StepData([observation], [], [], [], [], [])
         for _ in range(unroll_length):
-            logits, action = get_agent_actions(agents, observation, env.obs_dims)
+            logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
@@ -262,22 +260,13 @@ def train(
     ).to(device)
     env.step(action)
     # create the agent
-    if type(env.obs_dims) == int:
-        policy_layers = [
-            env.obs_dims,
-            64,
-            64,
-            env.action_space.shape[-1] * 2,
-        ]
-        value_layers = [env.obs_dims, 64, 64, 1]
-    elif type(env.obs_dims) == tuple:
-        policy_layers = [
-            sum(env.obs_dims),
-            64,
-            64,
-            env.action_space.shape[-1] * 2,
-        ]
-        value_layers = [sum(env.obs_dims), 64, 64, 1]
+    policy_layers = [
+        env.obs_dims,
+        64,
+        64,
+        env.action_space.shape[-1] * 2,
+    ]
+    value_layers = [env.obs_dims, 64, 64, 1]
 
     network_arch = {
         "policy_layers": policy_layers,
@@ -290,6 +279,8 @@ def train(
 
     agents = []
     optimizers = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    model_name = f"{timestamp}_ppo_{env_name}.pt"
 
     for agent_idx in range(env.num_agents):
         agents.append(Agent(**network_arch).to(device))
@@ -326,6 +317,11 @@ def train(
                     total_loss=total_loss,
                 )
                 progress_fn(total_steps, progress)
+            #Save model functionality
+            try: 
+                save_models(agents, network_arch, model_name=model_name)
+            except:
+                print("Failed to save model")
             if episode_reward >= eval_reward_limit:
                 break
 
@@ -352,7 +348,7 @@ def train(
             )
             td = sd_map(unroll_first, td)
             # update normalization statistics
-            update_normalization(agents, td.observation, env.obs_dims)
+            update_normalization(agents, td.observation, env.obs_dims_tuple)
             epoch_loss = 0.0
             for update_epoch in range(num_update_epochs):
                 # shuffle and batch the data
@@ -373,7 +369,7 @@ def train(
                         reshape_minibatch,
                         epoch_td,
                         minibatch_idx=minibatch_i,
-                        dims=env.obs_dims,
+                        dims=env.obs_dims_tuple,
                         num_agents=env.num_agents,
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
@@ -396,9 +392,5 @@ def train(
             (num_epochs * num_update_epochs * num_minibatches) + 1
         )
         sps = num_epochs * num_steps / duration
-    try:
-        save_models(agents, network_arch, env=env_name)
-    except:
-        pass
-        # raise SavingModelException
+
     return agents

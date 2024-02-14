@@ -209,7 +209,7 @@ class Humanoid(PipelineEnv):
         self.num_agents = 2
         self._dims = None
         if exclude_current_positions_from_observation:
-            self._position_dim = 20
+            self._position_dim = 22
         else:
             self._position_dim = 24
         self._velocity_dim = 23
@@ -301,8 +301,8 @@ class Humanoid(PipelineEnv):
         is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
         is_healthy_1_test = is_healthy_1.astype(jp.int32)
         is_healthy_2_test = is_healthy_2.astype(jp.int32)
-        return is_healthy_1.astype(jp.float32)
-        # return (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
+        # return is_healthy_1.astype(jp.float32)
+        return (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
 
     def _stand_up_rewards(self, pipeline_state):
         uph_cost_h1 = pipeline_state.x.pos[0, 2] / self.dt
