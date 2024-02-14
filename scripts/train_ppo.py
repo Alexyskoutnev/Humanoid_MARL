@@ -20,7 +20,7 @@ def main():
     if not debug:
         config = {
             'num_timesteps': 100_000_000,
-            'eval_reward_limit' : 15_000,
+            'eval_reward_limit' : 10_000,
             'eval_frequency': 10,
             'episode_length': 1000,
             'unroll_length': 10,
@@ -34,12 +34,13 @@ def main():
             'env_name': env_name,
             'device' : 'cuda',
             'debug' : False,
-            'device_idx' : gpu_index
+            'device_idx' : gpu_index,
+            'notebook' : False
         }
     else:
         config = {
             'num_timesteps': 200_000,
-            'eval_reward_limit' : 15_000,
+            'eval_reward_limit' : 10_000,
             'eval_frequency': 10,
             'episode_length': 1000,
             'unroll_length': 1,
@@ -53,7 +54,8 @@ def main():
             'env_name': env_name,
             'device' : 'cuda',
             'debug' : True,
-            'device_idx' : gpu_index
+            'device_idx' : gpu_index,
+            'notebook' : False
         }
     # ================ Config ================
     # ================ Logging ===============

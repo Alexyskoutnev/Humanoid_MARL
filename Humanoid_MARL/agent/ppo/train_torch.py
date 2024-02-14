@@ -1,4 +1,5 @@
 import collections
+from queue import Queue
 from datetime import datetime
 import functools
 import math
@@ -29,6 +30,7 @@ from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
 
 SAVE_MODELS = "./models"
+
 
 StepData = collections.namedtuple(
     "StepData", ("observation", "logits", "action", "reward", "done", "truncation")
@@ -236,10 +238,11 @@ def train(
     entropy_cost: float = 1e-3,
     discounting: float = 0.97,
     learning_rate: float = 3e-4,
-    eval_reward_limit: float = 6500,
+    eval_reward_limit: float = 10_000,
     debug: bool = False,
     device_idx: int = 0,
     logger=None,
+    notebook=False,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
     """Trains a policy via PPO."""
@@ -281,6 +284,7 @@ def train(
     optimizers = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_name = f"{timestamp}_ppo_{env_name}.pt"
+    running_mean = list()
 
     for agent_idx in range(env.num_agents):
         agents.append(Agent(**network_arch).to(device))
@@ -301,6 +305,7 @@ def train(
             duration = time.time() - t
             episode_avg_length = env.num_envs * episode_length / episode_count
             eval_sps = env.num_envs * episode_length / duration
+            running_mean.append(episode_reward.cpu().item())
             progress = {
                 "eval/episode_reward": episode_reward,
                 "eval/completed_episodes": episode_count,
@@ -308,6 +313,7 @@ def train(
                 "speed/sps": sps,
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
+                "eval/episode_reward_mean" : np.mean(running_mean[5:])
             }
             if not debug:
                 logger.log_eval(
@@ -319,10 +325,10 @@ def train(
                 progress_fn(total_steps, progress)
             #Save model functionality
             try: 
-                save_models(agents, network_arch, model_name=model_name)
+                save_models(agents, network_arch, model_name=model_name, notebook=notebook)
             except:
                 print("Failed to save model")
-            if episode_reward >= eval_reward_limit:
+            if np.mean(running_mean[5:]) >= eval_reward_limit:
                 break
 
         if eval_i == eval_frequency:

@@ -192,7 +192,7 @@ class Humanoid(PipelineEnv):
         num_humanoids=2,
         **kwargs,
     ):
-        humanoid_2_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_2.xml")
+        humanoid_2_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_2_no_collision.xml")
         sys = mjcf.load(humanoid_2_path)
 
         with open(humanoid_2_path, "r") as f_path:
