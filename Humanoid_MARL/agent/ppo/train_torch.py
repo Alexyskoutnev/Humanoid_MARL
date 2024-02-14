@@ -398,5 +398,4 @@ def train(
             (num_epochs * num_update_epochs * num_minibatches) + 1
         )
         sps = num_epochs * num_steps / duration
-
     return agents

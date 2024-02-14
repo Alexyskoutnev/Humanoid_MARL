@@ -14,12 +14,12 @@ seed_everything(SEED)
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
-    env_name = "humanoid"
-    project_name = f"MARL_ppo_{env_name}_debug"
+    env_name = "humanoids"
+    project_name = f"MARL_ppo_{env_name}"
     debug = False
     if not debug:
         config = {
-            'num_timesteps': 100_000_000,
+            'num_timesteps': 200_000_000,
             'eval_reward_limit' : 10_000,
             'eval_frequency': 10,
             'episode_length': 1000,
