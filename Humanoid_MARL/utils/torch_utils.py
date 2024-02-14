@@ -5,9 +5,13 @@ from datetime import datetime
 from Humanoid_MARL.agent.ppo.agent import Agent
 
 SAVE_MODELS = "./models"
+SAVE_MODEL_NOTEBOOK = "../models"
 
-def save_models(agents : list[Agent], network_arch : Dict, model_name : str):
-    filename = os.path.join(SAVE_MODELS, model_name)
+def save_models(agents : list[Agent], network_arch : Dict, model_name : str, notebook : bool = False):
+    if not notebook:
+        filename = os.path.join(SAVE_MODELS, model_name)
+    elif notebook:
+        filename = os.path.join(SAVE_MODEL_NOTEBOOK, model_name)
     state_dicts = {"network_arch": network_arch}
     for i, agent in enumerate(agents):
         state_dicts[f'agent_{i}'] = agent.state_dict()
