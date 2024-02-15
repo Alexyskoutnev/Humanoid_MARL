@@ -243,6 +243,7 @@ def train(
     device_idx: int = 0,
     logger=None,
     notebook=False,
+    model_path: str = None,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
     """Trains a policy via PPO."""
@@ -279,19 +280,23 @@ def train(
         "reward_scaling": reward_scaling,
         "device": device,
     }
-
-    agents = []
-    optimizers = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_name = f"{timestamp}_ppo_{env_name}.pt"
     running_mean = list()
-
-    for agent_idx in range(env.num_agents):
-        agents.append(Agent(**network_arch).to(device))
-        optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
-
+    optimizers = []
+    agents = []
+    if model_path:
+        try:
+            agents = load_models(model_path, Agent, device=device)
+            for agent_idx in range(env.num_agents):
+                optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
+        except:
+            print("Failed to load model")
+    else:    
+        for agent_idx in range(env.num_agents):
+            agents.append(Agent(**network_arch).to(device))
+            optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
     agents = [torch.jit.script(agent.to(device)) for agent in agents]
-    # print(f"Agent Weights {agents[0].state_dict()}")
     sps = 0
     total_steps = 0
     total_loss = 0

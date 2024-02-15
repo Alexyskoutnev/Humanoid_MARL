@@ -19,9 +19,9 @@ def main():
     debug = False
     if not debug:
         config = {
-            'num_timesteps': 200_000_000,
+            'num_timesteps': 500_000_000,
             'eval_reward_limit' : 10_000,
-            'eval_frequency': 10,
+            'eval_frequency': 50,
             'episode_length': 1000,
             'unroll_length': 10,
             'num_minibatches': 32,
@@ -35,7 +35,8 @@ def main():
             'device' : 'cuda',
             'debug' : False,
             'device_idx' : gpu_index,
-            'notebook' : False
+            'notebook' : False,
+            'model_path' : "./models/20240214_184013_ppo_humanoids.pt",
         }
     else:
         config = {
@@ -55,7 +56,8 @@ def main():
             'device' : 'cuda',
             'debug' : True,
             'device_idx' : gpu_index,
-            'notebook' : False
+            'notebook' : False,
+            'model_path' : None,
         }
     # ================ Config ================
     # ================ Logging ===============
