@@ -179,14 +179,16 @@ class Humanoid(PipelineEnv):
 
     def __init__(
         self,
-        forward_reward_weight=1.25,
+        forward_reward_weight=2.00,
         ctrl_cost_weight=0.1,
+        chase_reward_weight=1.0,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         include_standing_up_cost=False,
+        chase_reward=True,
         backend="generalized",
         visual="brax",
         num_humanoids=2,
@@ -256,10 +258,12 @@ class Humanoid(PipelineEnv):
         self._forward_reward_weight = forward_reward_weight
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward
+        self._chase_reward_weight = chase_reward_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
         self._standup_reward = include_standing_up_cost
+        self._chase_reward = chase_reward
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -284,6 +288,7 @@ class Humanoid(PipelineEnv):
             "reward_linvel": zero_init,
             "reward_quadctrl": zero_init,
             "reward_alive": zero_init,
+            "reward_chase": zero_init,
             "standup_reward": zero_init,
             "x_position": zero_init,
             "y_position": zero_init,
@@ -315,6 +320,14 @@ class Humanoid(PipelineEnv):
         )
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
+    
+    def _chase_reward_fn(self, pipeline_state):
+        h_1 = jp.sqrt(pipeline_state.x.pos[0, 0]**2 + pipeline_state.x.pos[0, 1]**2)
+        h_2 = jp.sqrt(pipeline_state.x.pos[11, 0]**2 + pipeline_state.x.pos[11, 1]**2)
+        _dist_diff = jp.abs(h_1 - h_2)
+        evader_reward = _dist_diff
+        persuader_reward = -_dist_diff
+        return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)]) * self._chase_reward_weight
 
     def done_signal(self, is_healthy):
         val = len(is_healthy) - sum(is_healthy)
@@ -332,6 +345,7 @@ class Humanoid(PipelineEnv):
         com_after, *_ = self._com(pipeline_state)
         velocity = (com_after - com_before) / self.dt
         forward_reward = self._forward_reward_weight * velocity[:, 0]
+        chase_reward = jp.zeros(2)
 
         if self._standup_reward:
             uph_cost = self._stand_up_rewards(pipeline_state)
@@ -348,11 +362,15 @@ class Humanoid(PipelineEnv):
             healthy_reward = (
                 self._healthy_reward * jp.ones(self.num_humanoids) * is_healthy
             )
+        if self._chase_reward:
+            chase_reward = self._chase_reward_fn(pipeline_state)
+        else:
+            chase_reward = jp.zeros(2)
 
         ctrl_cost = self._control_reward(action)
 
         obs = self._get_obs(pipeline_state, action)
-        reward = forward_reward + healthy_reward - ctrl_cost + uph_cost
+        reward = forward_reward + healthy_reward - ctrl_cost + uph_cost + chase_reward
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
 
         humanoids_z = jp.concatenate(
@@ -367,6 +385,7 @@ class Humanoid(PipelineEnv):
             reward_linvel=forward_reward,
             reward_quadctrl=-ctrl_cost,
             reward_alive=healthy_reward,
+            reward_chase=chase_reward,
             x_position=com_after[:, 0],
             y_position=com_after[:, 1],
             distance_from_origin=jp.linalg.norm(com_after, axis=1),

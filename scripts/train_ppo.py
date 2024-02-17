@@ -8,9 +8,6 @@ from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import seed_everything
 
-SEED = 1
-seed_everything(SEED)
-
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
@@ -19,7 +16,7 @@ def main():
     debug = False
     if not debug:
         config = {
-            'num_timesteps': 500_000_000,
+            'num_timesteps': 1_500_000_000,
             'eval_reward_limit' : 10_000,
             'eval_frequency': 50,
             'episode_length': 1000,
@@ -27,7 +24,7 @@ def main():
             'num_minibatches': 32,
             'num_update_epochs': 8,
             'discounting': 0.97,
-            'learning_rate': 3e-4,
+            'learning_rate': 2e-4,
             'entropy_cost': 2e-3,
             'num_envs': 2048,
             'batch_size': 512,
@@ -36,7 +33,7 @@ def main():
             'debug' : False,
             'device_idx' : gpu_index,
             'notebook' : False,
-            'model_path' : "./models/20240214_184013_ppo_humanoids.pt",
+            'model_path' : "./models/20240216_143929_ppo_humanoids_v0.pt",
         }
     else:
         config = {
