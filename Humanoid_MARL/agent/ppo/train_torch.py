@@ -243,6 +243,7 @@ def train(
     logger=None,
     notebook=False,
     model_path: str = None,
+    env_config: Dict[str, Any] = {},
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
     """Trains a policy via PPO."""
@@ -252,6 +253,7 @@ def train(
         episode_length=episode_length,
         backend="generalized",
         device_idx=device_idx,
+        **env_config,
     )
     env = VectorGymWrapper(env)
     # automatically convert between jax ndarrays and torch tensors:
@@ -265,12 +267,12 @@ def train(
     # create the agent
     policy_layers = [
         env.obs_dims,
-        128,
-        128,
-        128,
+        64,
+        64,
+        64,
         env.action_space.shape[-1] * 2,
     ]
-    value_layers = [env.obs_dims, 128, 128, 128, 1]
+    value_layers = [env.obs_dims, 64, 64, 64, 1]
 
     network_arch = {
         "policy_layers": policy_layers,
