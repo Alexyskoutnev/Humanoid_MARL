@@ -24,7 +24,6 @@ import torch.nn.functional as F
 # Humandoid MARL
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
-from Humanoid_MARL.utils.visual import save_video, save_rgb_image
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
@@ -266,11 +265,12 @@ def train(
     # create the agent
     policy_layers = [
         env.obs_dims,
-        64,
-        64,
+        128,
+        128,
+        128,
         env.action_space.shape[-1] * 2,
     ]
-    value_layers = [env.obs_dims, 64, 64, 1]
+    value_layers = [env.obs_dims, 128, 128, 128, 1]
 
     network_arch = {
         "policy_layers": policy_layers,

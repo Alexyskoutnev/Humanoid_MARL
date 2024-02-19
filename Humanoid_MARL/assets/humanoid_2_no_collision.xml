@@ -101,7 +101,7 @@
             </body>
         </body>
 
-        <body name="torso_h2" pos="1.0 0 1.4">
+        <body name="torso_h2" pos="1.0 1.0 1.4">
             <camera name="track_h2" mode="trackcom" pos="0 -4 0" xyaxes="1 0 0 0 0 1"/>
             <joint armature="0" damping="0" limited="false" name="root_h2" pos="0 0 0" stiffness="0" type="free"/>
             <geom fromto="0 -.07 0 0 .07 0" name="torso1_h2" size="0.07" type="capsule"/>

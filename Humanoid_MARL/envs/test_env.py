@@ -30,7 +30,6 @@ import mujoco
 import base64
 
 #Visuals
-import mediapy as media
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from IPython.display import HTML, clear_output, display

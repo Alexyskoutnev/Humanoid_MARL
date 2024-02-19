@@ -1,19 +1,17 @@
 import os
 from datetime import datetime
 import numpy as np
-import wandb
 import matplotlib.pyplot as plt
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
-from Humanoid_MARL.utils.utils import seed_everything
 
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
     env_name = "humanoids"
     project_name = f"MARL_ppo_{env_name}"
-    debug = False
+    debug = True
     if not debug:
         config = {
             'num_timesteps': 1_500_000_000,
@@ -33,7 +31,7 @@ def main():
             'debug' : False,
             'device_idx' : gpu_index,
             'notebook' : False,
-            'model_path' : "./models/20240216_143929_ppo_humanoids_v0.pt",
+            'model_path' : None,
         }
     else:
         config = {

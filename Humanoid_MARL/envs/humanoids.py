@@ -181,7 +181,7 @@ class Humanoid(PipelineEnv):
         self,
         forward_reward_weight=2.00,
         ctrl_cost_weight=0.1,
-        chase_reward_weight=1.0,
+        chase_reward_weight=3.0,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),

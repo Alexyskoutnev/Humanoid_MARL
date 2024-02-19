@@ -1,9 +1,7 @@
-from typing import Any, Callable, Dict, Optional, Sequence, Union, List, Tuple
-from Humanoid_MARL.utils.logger import WandbLogger
+from typing import Dict, Sequence, Tuple
 import math
 import torch
 from torch import nn
-from torch import optim
 import torch.nn.functional as F
 
 
@@ -156,9 +154,7 @@ class Agent(nn.Module):
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
         td_obs = td["observation"][:, :, agent_idx, :]
-        # breakpoint()
         observation = self.normalize(td_obs)
-        # breakpoint()
         policy_logits = self.policy(observation[:-1])
         baseline = self.value(observation)
         baseline = torch.squeeze(baseline, dim=-1)
@@ -217,10 +213,5 @@ class Agent(nn.Module):
         # Entropy reward
         entropy = torch.mean(self.dist_entropy(loc, scale))
         entropy_loss = self.entropy_cost * -entropy
-
-        # if not debug:
-        #     logger.log_network_loss(policy_loss, v_loss, entropy_loss)
-        # else:
-        #     print(f"Policy Loss | {policy_loss} | Value Loss | {v_loss} | Entropy Loss | {entropy_loss}")
 
         return policy_loss + v_loss + entropy_loss
