@@ -48,9 +48,13 @@ def main():
             "entropy_cost": 1e-3,
             "num_envs": 4,
             "batch_size": 64,
+            
+            
             "env_name": env_name,
             "device": "cuda",
             "debug": True,
+            
+            
             "device_idx": gpu_index,
             "notebook": False,
             "model_path": None,
