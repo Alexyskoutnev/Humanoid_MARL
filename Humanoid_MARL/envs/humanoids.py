@@ -179,18 +179,17 @@ class Humanoid(PipelineEnv):
 
     def __init__(
         self,
-        forward_reward_weight=2.00,
+        forward_reward_weight=1.5,
         ctrl_cost_weight=0.1,
-        chase_reward_weight=3.0,
+        chase_reward_weight=1.0,
         healthy_reward=5.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         include_standing_up_cost=False,
-        chase_reward=True,
+        chase_reward=False,
         backend="generalized",
-        visual="brax",
         num_humanoids=2,
         **kwargs,
     ):
@@ -198,16 +197,6 @@ class Humanoid(PipelineEnv):
             PACKAGE_ROOT, "assets", "humanoid_2_no_collision.xml"
         )
         sys = mjcf.load(humanoid_2_path)
-
-        with open(humanoid_2_path, "r") as f_path:
-            xml_string = f_path.read()
-            mj_model = mujoco.MjModel.from_xml_string(xml_string)
-
-        if visual == "mujoco":
-            self.mj_model = mj_model
-            self.mj_data = mujoco.MjData(mj_model)
-            self.renderer = mujoco.Renderer(mj_model)
-
         n_frames = 5
         self.num_humanoids = num_humanoids
         self.num_agents = 2
@@ -220,38 +209,6 @@ class Humanoid(PipelineEnv):
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
         self._q_actuator_dim = 23
-
-        if backend in ["spring", "positional"]:
-            sys = sys.replace(dt=0.0015)
-            n_frames = 10
-            gear = jp.array(
-                [
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    350.0,
-                    100.0,
-                    100.0,
-                    100.0,
-                    100.0,
-                    100.0,
-                    100.0,
-                ]
-            )  # pyformat: disable
-            sys = sys.replace(actuator=sys.actuator.replace(gear=gear))
-
-        if backend == "mjx":
-            sys._model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
-            sys._model.opt.disableflags = mujoco.mjtDisableBit.mjDSBL_EULERDAMP
-            sys._model.opt.iterations = 1
-            sys._model.opt.ls_iterations = 4
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
 
@@ -466,14 +423,6 @@ class Humanoid(PipelineEnv):
 
     def _com(self, pipeline_state: base.State) -> jax.Array:
         inertia = self.sys.link.inertia
-        if self.backend in ["spring", "positional"]:
-            inertia = inertia.replace(
-                i=jax.vmap(jp.diag)(
-                    jax.vmap(jp.diagonal)(inertia.i)
-                    ** (1 - self.sys.spring_inertia_scale)
-                ),
-                mass=inertia.mass ** (1 - self.sys.spring_mass_scale),
-            )
         if (self.num_humanoids) == 1:
             mass_sum = jp.sum(inertia.mass)
             x_i = pipeline_state.x.vmap().do(inertia.transform)

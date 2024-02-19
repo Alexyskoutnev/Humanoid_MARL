@@ -2,59 +2,37 @@ import os
 from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
+from typing import Dict
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
+from Humanoid_MARL import CONFIG_TRAIN, CONFIG_NETWORK, CONFIG_REWARD
+
+
+def debug_config(config: Dict) -> Dict:
+    update_config = {
+        "unroll_length": 1,
+        "num_minibatches": 1,
+        "num_envs": 1,
+        "batch_size": 1,
+        "unroll_length": 1,
+    }
+    return config.update(update_config)
 
 
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     print(f"USING GPU {gpu_index}")
     env_name = "humanoids"
-    project_name = f"MARL_ppo_{env_name}"
-    debug = True
-    if not debug:
-        config = {
-            "num_timesteps": 1_500_000_000,
-            "eval_reward_limit": 10_000,
-            "eval_frequency": 50,
-            "episode_length": 1000,
-            "unroll_length": 10,
-            "num_minibatches": 32,
-            "num_update_epochs": 8,
-            "discounting": 0.97,
-            "learning_rate": 2e-4,
-            "entropy_cost": 2e-3,
-            "num_envs": 2048,
-            "batch_size": 512,
-            "env_name": env_name,
-            "device": "cuda",
-            "debug": False,
-            "device_idx": gpu_index,
-            "notebook": False,
-            "model_path": None,
-        }
-    else:
-        config = {
-            "num_timesteps": 200_000,
-            "eval_reward_limit": 10_000,
-            "eval_frequency": 10,
-            "episode_length": 1000,
-            "unroll_length": 1,
-            "num_minibatches": 8,
-            "num_update_epochs": 1,
-            "discounting": 0.97,
-            "learning_rate": 3e-4,
-            "entropy_cost": 1e-3,
-            "num_envs": 4,
-            "batch_size": 64,
-            "env_name": env_name,
-            "device": "cuda",
-            "debug": True,
-            "device_idx": gpu_index,
-            "notebook": False,
-            "model_path": None,
-        }
+    project_name = f"MARL_ppo_{env_name}_and"
+    # ================ Config ================
+    with open(CONFIG_TRAIN, "r") as f:
+        config = yaml.safe_load(f)
+        if config["debug"]:
+            debug_config(config)
+    with open(CONFIG_REWARD, "r") as f:
+        env_config = yaml.safe_load(f)
     # ================ Config ================
     # ================ Logging ===============
     if not config["debug"]:
@@ -84,8 +62,8 @@ def main():
         plt.savefig(PLT_SAVE_PATH)
 
     # ================ Progress Function ================
-    if debug:
-        train(**config, progress_fn=None)
+    if config["debug"]:
+        train(**config, progress_fn=None, env_config=env_config)
     else:
         train(**config, progress_fn=progress)
     print(f"time to jit: {times[1] - times[0]}")
