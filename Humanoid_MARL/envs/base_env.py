@@ -29,7 +29,8 @@ from jax import numpy as jp
 from jax import vmap
 from jax.tree_util import tree_map
 
-@ft.partial(jax.jit, static_argnums=1) 
+
+@ft.partial(jax.jit, static_argnums=1)
 def take(input, i, axis=0):  # Brax version of .take() doesn't work
     return tree_map(lambda x: jp.take(x, i, axis=axis, mode="wrap"), input)
 
@@ -41,8 +42,13 @@ class GymWrapper(gym.Env):
     # `_reset` as signs of a deprecated gym Env API.
     _gym_disable_underscore_compat: ClassVar[bool] = True
 
-    def __init__(self, env: PipelineEnv, seed: int = 0, backend: Optional[str] = None,
-                get_jax_state : bool = True):
+    def __init__(
+        self,
+        env: PipelineEnv,
+        seed: int = 0,
+        backend: Optional[str] = None,
+        get_jax_state: bool = True,
+    ):
         self._env = env
         self.get_jax_state = get_jax_state
         self.num_agents = env.num_humanoids
@@ -137,12 +143,12 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         self.observation_space = utils.batch_space(obs_space, self.num_envs)
 
         self.obs_dims = env.observation_size // self.num_agents
-        
-        if hasattr(env, 'obs_dims'):
+
+        if hasattr(env, "obs_dims"):
             self.obs_dims_tuple = env.obs_dims
         else:
             self.obs_dims_tuple = None
-            
+
         action = jax.tree_map(np.array, self._env.sys.actuator.ctrl_range)
         self.num_actuators = len(self._env.sys.actuator.ctrl_range) // self.num_agents
         action_space = spaces.Box(
@@ -151,10 +157,10 @@ class VectorGymWrapper(gym.vector.VectorEnv):
             dtype="float32",
         )
         self.action_space = utils.batch_space(action_space, self.num_envs)
-        if hasattr(env, 'action_dim'):
+        if hasattr(env, "action_dim"):
             self.action_dim = env.action_dim
         else:
-            self.action_dim  = env.action_size // self.num_agents
+            self.action_dim = env.action_size // self.num_agents
 
         def reset(key):
             key1, key2 = jax.random.split(key)

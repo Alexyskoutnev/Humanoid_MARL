@@ -26,6 +26,7 @@ import torch.nn.functional as F
 SEED = 1
 seed_everything(SEED)
 
+
 class Agent(nn.Module):
     """Standard PPO Agent with GAE and observation normalization."""
 
@@ -319,7 +320,7 @@ def train(
             break
 
         observation = env.reset()
-        num_steps = batch_size * num_minibatches * unroll_length #
+        num_steps = batch_size * num_minibatches * unroll_length  #
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         num_unrolls = batch_size * num_minibatches // env.num_envs
 
@@ -329,6 +330,7 @@ def train(
             observation, td = train_unroll(
                 agent, env, observation, num_unrolls, unroll_length
             )
+
             # ========================== Important State INFO  ==========================
             # observation shape -> [env.num_envs, env.obs_dim] | [2048, 244]
             # batch_size = 1024
@@ -341,6 +343,7 @@ def train(
             def unroll_first(data):
                 data = data.swapaxes(0, 1)
                 return data.reshape([data.shape[0], -1] + list(data.shape[3:]))
+
             # ========================== Important State INFO  ==========================
             # td.observation shape -> [unroll_length + 1, env.num_envs * num_unrolls, env.obs_dim] | torch.Size([6, 32768, 244])
             # Combines all the parallized envs rollouts into one big sample of 6 step rollouts
@@ -353,6 +356,7 @@ def train(
                 # shuffle and batch the data
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
+
                     # ========================== Important State INFO  ==========================
                     # Shuffle the 32768 samples around to with random idxs
                     # permutation = tensor([32010,  5583, 31874,  ..., 21217,  4685, 10656], device='cuda:0')
@@ -363,6 +367,7 @@ def train(
                             [data.shape[0], num_minibatches, -1] + list(data.shape[2:])
                         )
                         return data.swapaxes(0, 1)
+
                     epoch_td = sd_map(shuffle_batch, td)
                     # ========================== Important State INFO  ==========================
                     # epoch_td.observation.shape | [num_minibatches, unroll_length, batch_size, env.obs_dim] | torch.Size([32, 6, 1024, 244])
@@ -387,7 +392,6 @@ def train(
 
 
 if __name__ == "__main__":
-
     env_name = "humanoid"
 
     xdata = []
@@ -408,20 +412,21 @@ if __name__ == "__main__":
         plt.ylabel("reward per episode")
         plt.plot(xdata, ydata)
         plt.show()
+
     config = {
-            'num_timesteps': 150_000_000,
-            'eval_frequency': 100,
-            'episode_length': 1000,
-            'unroll_length': 10,
-            'num_minibatches': 32,
-            'num_update_epochs': 8,
-            'discounting': 0.97,
-            'learning_rate': 3e-4,
-            'entropy_cost': 2e-3,
-            'num_envs': 2048,
-            'batch_size': 512,
-            'env_name': env_name,
-            'device' : 'cuda'
+        "num_timesteps": 150_000_000,
+        "eval_frequency": 100,
+        "episode_length": 1000,
+        "unroll_length": 10,
+        "num_minibatches": 32,
+        "num_update_epochs": 8,
+        "discounting": 0.97,
+        "learning_rate": 3e-4,
+        "entropy_cost": 2e-3,
+        "num_envs": 2048,
+        "batch_size": 512,
+        "env_name": env_name,
+        "device": "cuda",
     }
     train(**config, progress_fn=progress)
 

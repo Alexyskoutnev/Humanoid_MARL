@@ -194,7 +194,9 @@ class Humanoid(PipelineEnv):
         num_humanoids=2,
         **kwargs,
     ):
-        humanoid_2_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_2_no_collision.xml")
+        humanoid_2_path = os.path.join(
+            PACKAGE_ROOT, "assets", "humanoid_2_no_collision.xml"
+        )
         sys = mjcf.load(humanoid_2_path)
 
         with open(humanoid_2_path, "r") as f_path:
@@ -320,14 +322,19 @@ class Humanoid(PipelineEnv):
         )
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
-    
+
     def _chase_reward_fn(self, pipeline_state):
-        h_1 = jp.sqrt(pipeline_state.x.pos[0, 0]**2 + pipeline_state.x.pos[0, 1]**2)
-        h_2 = jp.sqrt(pipeline_state.x.pos[11, 0]**2 + pipeline_state.x.pos[11, 1]**2)
+        h_1 = jp.sqrt(pipeline_state.x.pos[0, 0] ** 2 + pipeline_state.x.pos[0, 1] ** 2)
+        h_2 = jp.sqrt(
+            pipeline_state.x.pos[11, 0] ** 2 + pipeline_state.x.pos[11, 1] ** 2
+        )
         _dist_diff = jp.abs(h_1 - h_2)
         evader_reward = _dist_diff
         persuader_reward = -_dist_diff
-        return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)]) * self._chase_reward_weight
+        return (
+            jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
+            * self._chase_reward_weight
+        )
 
     def done_signal(self, is_healthy):
         val = len(is_healthy) - sum(is_healthy)

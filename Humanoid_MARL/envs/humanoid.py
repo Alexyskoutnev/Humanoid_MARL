@@ -172,6 +172,7 @@ class Humanoid(PipelineEnv):
     table) is **not** in the range `[0.8, 2.1]` (the humanoid has fallen or is
     about to fall beyond recovery).
     """
+
     # pyformat: enable
 
     def __init__(
@@ -187,7 +188,9 @@ class Humanoid(PipelineEnv):
         **kwargs,
     ):
         # path = epath.resource_path("brax") / "envs/assets/humanoid.xml"
-        humanoid_1_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_no_collision.xml") # default XML file from Google
+        humanoid_1_path = os.path.join(
+            PACKAGE_ROOT, "assets", "humanoid_no_collision.xml"
+        )  # default XML file from Google
         sys = mjcf.load(humanoid_1_path)
 
         n_frames = 5
@@ -382,7 +385,7 @@ class Humanoid(PipelineEnv):
     @property
     def obs_dims(self) -> int:
         return self.dims[:-1]
-    
+
     @property
     def action_dim(self) -> int:
         return self.dims[-1]

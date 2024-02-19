@@ -25,30 +25,34 @@ import gym
 
 
 class TorchWrapper(gym.Wrapper):
-  """Wrapper that converts Jax tensors to PyTorch tensors."""
+    """Wrapper that converts Jax tensors to PyTorch tensors."""
 
-  def __init__(self, env: gym.Env, device: Optional[torch.Device] = None, get_jax_state : bool = True):
-    """Creates a gym Env to one that outputs PyTorch tensors."""
-    super().__init__(env)
-    self.device = device
-    self.get_jax_state = get_jax_state
+    def __init__(
+        self,
+        env: gym.Env,
+        device: Optional[torch.Device] = None,
+        get_jax_state: bool = True,
+    ):
+        """Creates a gym Env to one that outputs PyTorch tensors."""
+        super().__init__(env)
+        self.device = device
+        self.get_jax_state = get_jax_state
 
-  def reset(self):
-    obs = super().reset()
-    return torch.jax_to_torch(obs, device=self.device)
+    def reset(self):
+        obs = super().reset()
+        return torch.jax_to_torch(obs, device=self.device)
 
-  def step(self, action):
-    action = torch.torch_to_jax(action)
-    if self.get_jax_state:
-        jax_state, obs, reward, done, info = super().step(action)
-    else:
-      obs, reward, done, info = super().step(action)
-    obs = torch.jax_to_torch(obs, device=self.device)
-    reward = torch.jax_to_torch(reward, device=self.device)
-    done = torch.jax_to_torch(done, device=self.device)
-    info = torch.jax_to_torch(info, device=self.device)
-    if not self.get_jax_state:
-        return obs, reward, done, info
-    elif self.get_jax_state:
-        return jax_state, obs, reward, done, info
-       
+    def step(self, action):
+        action = torch.torch_to_jax(action)
+        if self.get_jax_state:
+            jax_state, obs, reward, done, info = super().step(action)
+        else:
+            obs, reward, done, info = super().step(action)
+        obs = torch.jax_to_torch(obs, device=self.device)
+        reward = torch.jax_to_torch(reward, device=self.device)
+        done = torch.jax_to_torch(done, device=self.device)
+        info = torch.jax_to_torch(info, device=self.device)
+        if not self.get_jax_state:
+            return obs, reward, done, info
+        elif self.get_jax_state:
+            return jax_state, obs, reward, done, info

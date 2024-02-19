@@ -289,13 +289,17 @@ def train(
         try:
             agents = load_models(model_path, Agent, device=device)
             for agent_idx in range(env.num_agents):
-                optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
+                optimizers.append(
+                    optim.Adam(agents[agent_idx].parameters(), lr=learning_rate)
+                )
         except:
             print("Failed to load model")
-    else:    
+    else:
         for agent_idx in range(env.num_agents):
             agents.append(Agent(**network_arch).to(device))
-            optimizers.append(optim.Adam(agents[agent_idx].parameters(), lr=learning_rate))
+            optimizers.append(
+                optim.Adam(agents[agent_idx].parameters(), lr=learning_rate)
+            )
     agents = [torch.jit.script(agent.to(device)) for agent in agents]
     sps = 0
     total_steps = 0
@@ -318,7 +322,7 @@ def train(
                 "speed/sps": sps,
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
-                "eval/episode_reward_mean" : np.mean(running_mean[5:])
+                "eval/episode_reward_mean": np.mean(running_mean[5:]),
             }
             if not debug:
                 logger.log_eval(
@@ -328,9 +332,11 @@ def train(
                     total_loss=total_loss,
                 )
                 progress_fn(total_steps, progress)
-            #Save model functionality
-            try: 
-                save_models(agents, network_arch, model_name=model_name, notebook=notebook)
+            # Save model functionality
+            try:
+                save_models(
+                    agents, network_arch, model_name=model_name, notebook=notebook
+                )
             except:
                 print("Failed to save model")
             if np.mean(running_mean[5:]) >= eval_reward_limit:
@@ -342,7 +348,9 @@ def train(
         num_steps = batch_size * num_minibatches * unroll_length
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         if num_epochs <= 0:
-            raise ValueError("num_timesteps too low for given batch size and unroll length")
+            raise ValueError(
+                "num_timesteps too low for given batch size and unroll length"
+            )
         num_unrolls = batch_size * num_minibatches // env.num_envs
         total_loss = 0
         t = time.time()

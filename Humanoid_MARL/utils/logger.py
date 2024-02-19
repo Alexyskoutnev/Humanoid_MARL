@@ -11,13 +11,25 @@ class WandbLogger:
         if num_agents == 1:
             wandb.log(
                 {
-                    "forward_reward": torch.mean(info["forward_reward"], dim=0).cpu().item(),
-                    "reward_linvel": torch.mean(info["reward_linvel"], dim=0).cpu().item(),
-                    "reward_quadctrl": torch.mean(info["reward_quadctrl"], dim=0).cpu().item(),
-                    "reward_alive": torch.mean(info["reward_alive"], dim=0).cpu().item(),
+                    "forward_reward": torch.mean(info["forward_reward"], dim=0)
+                    .cpu()
+                    .item(),
+                    "reward_linvel": torch.mean(info["reward_linvel"], dim=0)
+                    .cpu()
+                    .item(),
+                    "reward_quadctrl": torch.mean(info["reward_quadctrl"], dim=0)
+                    .cpu()
+                    .item(),
+                    "reward_alive": torch.mean(info["reward_alive"], dim=0)
+                    .cpu()
+                    .item(),
                     "x_position": torch.mean(info["x_position"], dim=0).cpu().item(),
                     "y_position": torch.mean(info["y_position"], dim=0).cpu().item(),
-                    "distance_from_origin": torch.mean(info["distance_from_origin"], dim=0).cpu().item(),
+                    "distance_from_origin": torch.mean(
+                        info["distance_from_origin"], dim=0
+                    )
+                    .cpu()
+                    .item(),
                     "training_reward": rewards.cpu().item(),
                     "x_velocity": torch.mean(info["x_velocity"], dim=0).cpu().item(),
                     "y_velocity": torch.mean(info["y_velocity"], dim=0).cpu().item(),
@@ -26,9 +38,15 @@ class WandbLogger:
         elif num_agents == 2:
             wandb.log(
                 {
-                    "forward_reward_h1": torch.mean(info["forward_reward"], dim=0).cpu()[0].item(),
-                    "forward_reward_h2": torch.mean(info["forward_reward"], dim=0).cpu()[1].item(),
-                    "reward_linvel_h1": torch.mean(info["reward_linvel"], dim=0).cpu()[0].item(),
+                    "forward_reward_h1": torch.mean(info["forward_reward"], dim=0)
+                    .cpu()[0]
+                    .item(),
+                    "forward_reward_h2": torch.mean(info["forward_reward"], dim=0)
+                    .cpu()[1]
+                    .item(),
+                    "reward_linvel_h1": torch.mean(info["reward_linvel"], dim=0)
+                    .cpu()[0]
+                    .item(),
                     "reward_linvel_h2": torch.mean(info["reward_linvel"], dim=0)
                     .cpu()[1]
                     .item(),
@@ -100,14 +118,13 @@ class WandbLogger:
                 "losses/total_loss": total_loss,
             }
         )
-    def log_epoch_loss(self, epoch_loss: float) -> None:
-        wandb.log(
-            {
-                "losses/epoch_loss": epoch_loss
-            }
-        )
 
-    def log_network_loss(self, critic_loss: float, actor_loss: float, entropy_loss : float) -> None:
+    def log_epoch_loss(self, epoch_loss: float) -> None:
+        wandb.log({"losses/epoch_loss": epoch_loss})
+
+    def log_network_loss(
+        self, critic_loss: float, actor_loss: float, entropy_loss: float
+    ) -> None:
         wandb.log(
             {
                 "losses/critic_loss": critic_loss,

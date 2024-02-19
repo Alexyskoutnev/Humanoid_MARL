@@ -39,8 +39,9 @@ import cProfile
 import torch
 import numpy as np
 
-#Debugging Flags
+# Debugging Flags
 from jax import config
+
 # config.update("jax_debug_nans", True) #Throw NaN if they happen
 # config.update("jax_disable_jit", True) #Disable JIT [remove this if you want speed]
 
@@ -168,7 +169,10 @@ class Ants(PipelineEnv):
         return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
 
     def _control_reward(self, action):
-        action = reshape_vector(action, (self.num_humaniods, action.shape[0] // self.num_humaniods),)
+        action = reshape_vector(
+            action,
+            (self.num_humaniods, action.shape[0] // self.num_humaniods),
+        )
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
 
@@ -178,7 +182,7 @@ class Ants(PipelineEnv):
             return 1.0
         else:
             return 0.0
-        
+
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -196,9 +200,9 @@ class Ants(PipelineEnv):
             healthy_reward = self._healthy_reward * jp.ones(self.num_humaniods)
         else:
             healthy_reward = self._healthy_reward * is_healthy
-            
+
         ctrl_cost = self._control_reward(action)
-        
+
         obs = self._get_obs(pipeline_state, action)
         reward = forward_reward + healthy_reward - ctrl_cost
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
@@ -215,7 +219,9 @@ class Ants(PipelineEnv):
             y_velocity=velocity[:, 1],
         )
 
-        return state.replace(pipeline_state=pipeline_state, obs=obs, reward=reward, done=done)
+        return state.replace(
+            pipeline_state=pipeline_state, obs=obs, reward=reward, done=done
+        )
 
     def _flatten(self, x):
         return jp.ravel(x)
@@ -226,9 +232,13 @@ class Ants(PipelineEnv):
         velocity = pipeline_state.qd
 
         if self._exclude_current_positions_from_observation:
-            indices_to_remove = np.array([0, 1, 24, 25]) #Removing CoM x-y for humanoid 1 and 2
-            position = position[np.logical_not(np.isin(np.arange(len(position)), indices_to_remove))]
-    
+            indices_to_remove = np.array(
+                [0, 1, 24, 25]
+            )  # Removing CoM x-y for humanoid 1 and 2
+            position = position[
+                np.logical_not(np.isin(np.arange(len(position)), indices_to_remove))
+            ]
+
         com, inertia, mass_sum, x_i = self._com(pipeline_state)
 
         if self.num_humaniods == 1:
@@ -239,7 +249,9 @@ class Ants(PipelineEnv):
             x_i_pos = reshape_vector(x_i.pos, (self.num_humaniods, -1, 3))
             pos_replace = reshape_vector(self._flatten(x_i_pos - com), (-1, 3))
             cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
-            mass_sum = self._flatten(mass_sum[0])  # double check that mass_sum arent different btw the two robots
+            mass_sum = self._flatten(
+                mass_sum[0]
+            )  # double check that mass_sum arent different btw the two robots
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -290,7 +302,9 @@ class Ants(PipelineEnv):
             mass_sum = jp.sum(inertia_mass, axis=1)
             x_i = pipeline_state.x.vmap().do(inertia.transform)
             x_i_pos = reshape_vector(x_i.pos, (self.num_humaniods, -1, 3))
-            com = jp.sum(jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1) / reshape_vector(mass_sum, (-1, 1))
+            com = jp.sum(
+                jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1
+            ) / reshape_vector(mass_sum, (-1, 1))
         return com, inertia, mass_sum, x_i
 
     @property
@@ -322,16 +336,18 @@ class Ants(PipelineEnv):
     def action_space(self):
         return 17 * self.num_humaniods
 
-@ft.partial(jax.jit, static_argnums=1) 
+
+@ft.partial(jax.jit, static_argnums=1)
 def reshape_vector(vector, target_shape):
     return jp.reshape(vector, target_shape)
 
+
 if __name__ == "__main__":
-    #===============Config===============
+    # ===============Config===============
     device = "cuda"
     num_envs = 2048
     episode_length = 1000
-    #===============Config===============
+    # ===============Config===============
     env_name = "humanoids"
     env = envs.create(
         env_name,
@@ -343,5 +359,10 @@ if __name__ == "__main__":
     env = torch_wrapper.TorchWrapper(env, device=device)
     obs = env.reset()
 
-    action = torch.ones((env.action_space.shape[0], env.action_space.shape[1] * 2)).to(device) * 2
+    action = (
+        torch.ones((env.action_space.shape[0], env.action_space.shape[1] * 2)).to(
+            device
+        )
+        * 2
+    )
     env.step(action)

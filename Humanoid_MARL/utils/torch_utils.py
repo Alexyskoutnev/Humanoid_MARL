@@ -7,14 +7,17 @@ from Humanoid_MARL.agent.ppo.agent import Agent
 SAVE_MODELS = "./models"
 SAVE_MODEL_NOTEBOOK = "../models"
 
-def save_models(agents : List[Agent], network_arch : Dict, model_name : str, notebook : bool = False) -> None:
+
+def save_models(
+    agents: List[Agent], network_arch: Dict, model_name: str, notebook: bool = False
+) -> None:
     if not notebook:
         filename = os.path.join(SAVE_MODELS, model_name)
     elif notebook:
         filename = os.path.join(SAVE_MODEL_NOTEBOOK, model_name)
-    
+
     state_dicts = {"network_arch": network_arch, "agents": []}
-    
+
     for i, agent in enumerate(agents):
         agent_dict = {
             "index": i,
@@ -22,7 +25,7 @@ def save_models(agents : List[Agent], network_arch : Dict, model_name : str, not
             f"agent_value_{i}": agent.value.state_dict(),
             f"running_mean_{i}": agent.running_mean,
             f"running_variance_{i}": agent.running_variance,
-            f"num_steps_{i}": agent.num_steps
+            f"num_steps_{i}": agent.num_steps,
         }
         state_dicts["agents"].append(agent_dict)
 
@@ -30,11 +33,12 @@ def save_models(agents : List[Agent], network_arch : Dict, model_name : str, not
     print(f"Agent Weights {agent.state_dict()}")
     print(f"Agents saved to {filename}")
 
-def load_models(filename : str, agent_class : Agent, device : str = 'cuda') -> List[Agent]:
+
+def load_models(filename: str, agent_class: Agent, device: str = "cuda") -> List[Agent]:
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
     agents = []
-    
+
     for agent_dict in state_dicts["agents"]:
         index = agent_dict["index"]
         agent = agent_class(**network_arch).to(device)

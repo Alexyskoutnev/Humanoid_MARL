@@ -11,35 +11,35 @@ from Humanoid_MARL.envs.wrappers import VmapWrapper
 import jax
 
 _envs = {
-    'test': test_env.Humanoid,
-    'humanoids': humanoids.Humanoid,
-    'humanoid': humanoid.Humanoid,
-    'ant': ant.Ant,
-    'ants' : None,
+    "test": test_env.Humanoid,
+    "humanoids": humanoids.Humanoid,
+    "humanoid": humanoid.Humanoid,
+    "ant": ant.Ant,
+    "ants": None,
 }
 
 
 def get_environment(env_name: str, **kwargs) -> Env:
-  """Returns an environment from the environment registry.
+    """Returns an environment from the environment registry.
 
-  Args:
-    env_name: environment name string
-    **kwargs: keyword arguments that get passed to the Env class constructor
+    Args:
+      env_name: environment name string
+      **kwargs: keyword arguments that get passed to the Env class constructor
 
-  Returns:
-    env: an environment
-  """
-  return _envs[env_name](**kwargs)
+    Returns:
+      env: an environment
+    """
+    return _envs[env_name](**kwargs)
 
 
 def register_environment(env_name: str, env_class: Type[Env]):
-  """Adds an environment to the registry.
+    """Adds an environment to the registry.
 
-  Args:
-    env_name: environment name string
-    env_class: the Env class to add to the registry
-  """
-  _envs[env_name] = env_class
+    Args:
+      env_name: environment name string
+      env_class: the Env class to add to the registry
+    """
+    _envs[env_name] = env_class
 
 
 def create(
@@ -48,33 +48,33 @@ def create(
     action_repeat: int = 1,
     auto_reset: bool = True,
     batch_size: Optional[int] = None,
-    device_idx : int = 0,
+    device_idx: int = 0,
     **kwargs,
 ) -> Env:
-  """Creates an environment from the registry.
+    """Creates an environment from the registry.
 
-  Args:
-    env_name: environment name string
-    episode_length: length of episode
-    action_repeat: how many repeated actions to take per environment step
-    auto_reset: whether to auto reset the environment after an episode is done
-    batch_size: the number of environments to batch together
-    **kwargs: keyword argments that get passed to the Env class constructor
+    Args:
+      env_name: environment name string
+      episode_length: length of episode
+      action_repeat: how many repeated actions to take per environment step
+      auto_reset: whether to auto reset the environment after an episode is done
+      batch_size: the number of environments to batch together
+      **kwargs: keyword argments that get passed to the Env class constructor
 
-  Returns:
-    env: an environment
-  """
-  env = _envs[env_name](**kwargs)
-  try:
-    device_name = jax.local_devices()[int(device_idx)]
-  except:
-    device_name = jax.local_devices()[0]
+    Returns:
+      env: an environment
+    """
+    env = _envs[env_name](**kwargs)
+    try:
+        device_name = jax.local_devices()[int(device_idx)]
+    except:
+        device_name = jax.local_devices()[0]
 
-  if episode_length is not None:
-    env = training.EpisodeWrapper(env, episode_length, action_repeat)
-  if batch_size:
-    env = VmapWrapper(env, batch_size, device=device_name)
-  if auto_reset:
-    env = training.AutoResetWrapper(env)
+    if episode_length is not None:
+        env = training.EpisodeWrapper(env, episode_length, action_repeat)
+    if batch_size:
+        env = VmapWrapper(env, batch_size, device=device_name)
+    if auto_reset:
+        env = training.AutoResetWrapper(env)
 
-  return env
+    return env
