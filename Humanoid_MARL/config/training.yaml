@@ -6,13 +6,13 @@ unroll_length: 10
 num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.97
-learning_rate: 2e-4
-entropy_cost: 2e-3
+learning_rate: 0.0005
+entropy_cost: .002
 num_envs: 2048
 batch_size: 512
 env_name: humanoids
 device: cuda
-debug: True
+debug: False
 device_idx: 0
 notebook: false
-model_path: null
+model_path: Null

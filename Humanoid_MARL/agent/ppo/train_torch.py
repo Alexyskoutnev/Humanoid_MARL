@@ -227,7 +227,7 @@ def train(
     num_envs: Union[int, None] = 2048,
     episode_length: int = 1000,
     device: str = "cuda",
-    num_timesteps: int = 150_000_000,
+    num_timesteps: int = 100_000_000,
     eval_frequency: int = 10,
     unroll_length: int = 5,
     batch_size: int = 512,
@@ -292,10 +292,11 @@ def train(
             agents = load_models(model_path, Agent, device=device)
             for agent_idx in range(env.num_agents):
                 optimizers.append(
-                    optim.Adam(agents[agent_idx].parameters(), lr=learning_rate)
+                    optim.Adam(agents[agent_idx].parameters(), lr=float(learning_rate))
                 )
         except:
             print("Failed to load model")
+            exit()
     else:
         for agent_idx in range(env.num_agents):
             agents.append(Agent(**network_arch).to(device))
@@ -341,7 +342,7 @@ def train(
                 )
             except:
                 print("Failed to save model")
-            if np.mean(running_mean[5:]) >= eval_reward_limit:
+            if np.mean(running_mean[3:]) >= eval_reward_limit:
                 break
 
         if eval_i == eval_frequency:

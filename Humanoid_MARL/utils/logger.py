@@ -1,10 +1,17 @@
-from typing import Dict, List
+from typing import Dict, List, ClassVar
 import wandb
 import torch
 
 
 class WandbLogger:
     """Wandb logger for logging metrics and visualizing training progress."""
+
+    _skipped_keys: ClassVar[List[str]] = [
+        "first_pipeline_state",
+        "steps",
+        "truncation",
+        "first_obs",
+    ]
 
     def __init__(self, project_name="", config: Dict = {}) -> None:
         wandb.init(project=project_name, config=config)
@@ -16,16 +23,19 @@ class WandbLogger:
         for i in range(num_agents):
             agent_prefix = f"_h{i+1}" if num_agents > 1 else ""
             for key, _ in info.items():
-                try:
-                    log_data.update(
-                        {
-                            f"{key}{agent_prefix}": torch.mean(info[key], dim=0)
-                            .cpu()[i]
-                            .item()
-                        }
-                    )
-                except Exception as e:
-                    print(f"Error logging {key}{agent_prefix}: {e}")
+                if key in WandbLogger._skipped_keys:
+                    continue
+                else:
+                    try:
+                        log_data.update(
+                            {
+                                f"{key}{agent_prefix}": torch.mean(info[key], dim=0)
+                                .cpu()[i]
+                                .item()
+                            }
+                        )
+                    except Exception as e:
+                        print(f"Error logging {key}{agent_prefix}: {e}")
         wandb.log(log_data)
 
     def log_eval(

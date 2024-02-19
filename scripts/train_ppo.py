@@ -22,10 +22,10 @@ def debug_config(config: Dict) -> Dict:
 
 
 def main():
-    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
     print(f"USING GPU {gpu_index}")
     env_name = "humanoids"
-    project_name = f"MARL_ppo_{env_name}_and"
+    project_name = f"MARL_ppo_{env_name}_or"
     # ================ Config ================
     with open(CONFIG_TRAIN, "r") as f:
         config = yaml.safe_load(f)
@@ -63,9 +63,9 @@ def main():
 
     # ================ Progress Function ================
     if config["debug"]:
-        train(**config, progress_fn=None, env_config=env_config)
+        train(**config, progress_fn=None)
     else:
-        train(**config, progress_fn=progress)
+        train(**config, progress_fn=progress, env_config=env_config)
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
     print(f"eval steps/sec: {np.mean(eval_sps)}")
