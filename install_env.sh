@@ -1,7 +1,7 @@
 #!/bin/bash
 if command -v conda &> /dev/null; then
     echo "Conda is already installed."
-    source ~/miniconda3/etc/profile.d/conda.sh 
+    source ~/miniconda3/etc/profile.d/conda.sh
 else
     # Install Miniconda (adjust the URL and file name based on your needs)
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh

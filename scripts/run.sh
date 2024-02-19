@@ -16,7 +16,7 @@ fi
 # Set GPU_INDEX
 if [ "$#" -gt 0 ]; then
     GPU_INDEX="$1"
-else 
+else
     GPU_INDEX="0 1"  # Set GPU_INDEX to "0 1" when no argument is provided
 fi
 
