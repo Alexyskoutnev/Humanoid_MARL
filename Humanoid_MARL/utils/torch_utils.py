@@ -49,6 +49,7 @@ def load_models(filename: str, agent_class: Agent, device: str = "cuda") -> List
         agent.num_steps = agent_dict[f"num_steps_{index}"]
         agent.eval()
         agents.append(agent)
-
+    if len(agents) == 0:
+        raise ValueError("No agents loaded")
     print(f"Models loaded from {filename}")
     return agents

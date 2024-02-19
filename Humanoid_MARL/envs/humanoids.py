@@ -6,22 +6,15 @@ from brax import actuator
 from brax import base
 from brax.envs.base import PipelineEnv, State
 from brax.io import mjcf
-from brax.io import html
-from etils import epath
 import jax
 import functools as ft
 from jax import numpy as jp
-import mujoco
-import base64
-
 from Humanoid_MARL import PACKAGE_ROOT
 
 
 from brax.envs.wrappers import torch as torch_wrapper
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
-import cProfile
-import torch
 import numpy as np
 
 # Debugging Flags
@@ -183,11 +176,12 @@ class Humanoid(PipelineEnv):
         ctrl_cost_weight=0.1,
         chase_reward_weight=1.0,
         healthy_reward=5.0,
+        standup_cost=1.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
-        include_standing_up_cost=False,
+        include_standing_up_flag=False,
         chase_reward=False,
         backend="generalized",
         num_humanoids=2,
@@ -221,7 +215,8 @@ class Humanoid(PipelineEnv):
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
-        self._standup_reward = include_standing_up_cost
+        self._standup_reward = include_standing_up_flag
+        self._standup_cost = standup_cost
         self._chase_reward = chase_reward
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
@@ -268,8 +263,8 @@ class Humanoid(PipelineEnv):
         return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
 
     def _stand_up_rewards(self, pipeline_state):
-        uph_cost_h1 = pipeline_state.x.pos[0, 2] / self.dt
-        uph_cost_h2 = pipeline_state.x.pos[11, 2] / self.dt
+        uph_cost_h1 = pipeline_state.x.pos[0, 2]
+        uph_cost_h2 = pipeline_state.x.pos[11, 2]
         return jp.concatenate([uph_cost_h1.reshape(-1), uph_cost_h2.reshape(-1)])
 
     def _control_reward(self, action):
@@ -312,7 +307,7 @@ class Humanoid(PipelineEnv):
         chase_reward = jp.zeros(2)
 
         if self._standup_reward:
-            uph_cost = self._stand_up_rewards(pipeline_state)
+            uph_cost = self._stand_up_rewards(pipeline_state) * self._standup_cost
         else:
             uph_cost = jp.zeros(2)
 
@@ -461,7 +456,6 @@ class Humanoid(PipelineEnv):
 
     @dims.setter
     def dims(self, new_dims):
-        # Setter method allows setting a new value for dims
         self._dims = new_dims
 
     @property
@@ -472,29 +466,3 @@ class Humanoid(PipelineEnv):
 @ft.partial(jax.jit, static_argnums=1)
 def reshape_vector(vector, target_shape):
     return jp.reshape(vector, target_shape)
-
-
-if __name__ == "__main__":
-    # ===============Config===============
-    device = "cuda"
-    num_envs = 2048
-    episode_length = 1000
-    # ===============Config===============
-    env_name = "humanoids"
-    env = envs.create(
-        env_name,
-        batch_size=num_envs,
-        episode_length=episode_length,
-        backend="generalized",
-    )
-    env = VectorGymWrapper(env)
-    env = torch_wrapper.TorchWrapper(env, device=device)
-    obs = env.reset()
-
-    action = (
-        torch.ones((env.action_space.shape[0], env.action_space.shape[1] * 2)).to(
-            device
-        )
-        * 2
-    )
-    env.step(action)
