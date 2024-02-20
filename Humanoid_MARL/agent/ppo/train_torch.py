@@ -333,6 +333,7 @@ def train(
                     sps=sps,
                     eval_sps=eval_sps,
                     total_loss=total_loss,
+                    running_mean_reward=np.mean(running_mean[2:]),
                 )
                 progress_fn(total_steps, progress)
             # Save model functionality
@@ -342,7 +343,7 @@ def train(
                 )
             except:
                 print("Failed to save model")
-            if np.mean(running_mean[3:]) >= eval_reward_limit:
+            if np.mean(running_mean[2:]) >= eval_reward_limit:
                 break
 
         if eval_i == eval_frequency:

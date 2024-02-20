@@ -1,6 +1,7 @@
 """Trains a humanoid to run in the +x direction."""
 
 import os
+from typing import Union, Tuple
 
 from brax import actuator
 from brax import base
@@ -182,6 +183,8 @@ class Humanoid(PipelineEnv):
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         include_standing_up_flag=False,
+        or_done_flag=False,
+        and_done_flag=True,
         chase_reward=False,
         backend="generalized",
         num_humanoids=2,
@@ -218,6 +221,8 @@ class Humanoid(PipelineEnv):
         self._standup_reward = include_standing_up_flag
         self._standup_cost = standup_cost
         self._chase_reward = chase_reward
+        self._or_done_flag = or_done_flag
+        self._and_done_flag = and_done_flag
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -260,7 +265,18 @@ class Humanoid(PipelineEnv):
         is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
         is_healthy_1_test = is_healthy_1.astype(jp.int32)
         is_healthy_2_test = is_healthy_2.astype(jp.int32)
-        return (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+        done_signals = jp.concatenate(
+            [is_healthy_1_test.reshape(-1), is_healthy_2_test.reshape(-1)]
+        )
+        if self._or_done_flag:
+            env_done = (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        elif self._and_done_flag:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        else:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
 
     def _stand_up_rewards(self, pipeline_state):
         uph_cost_h1 = pipeline_state.x.pos[0, 2]
@@ -288,13 +304,6 @@ class Humanoid(PipelineEnv):
             * self._chase_reward_weight
         )
 
-    def done_signal(self, is_healthy):
-        val = len(is_healthy) - sum(is_healthy)
-        if jp.logical_and(0, val):
-            return 1.0
-        else:
-            return 0.0
-
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -312,10 +321,10 @@ class Humanoid(PipelineEnv):
             uph_cost = jp.zeros(2)
 
         min_z, max_z = self._healthy_z_range
-        is_healthy = self._check_is_healthy(pipeline_state, min_z, max_z)
+        is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
         if self._terminate_when_unhealthy:
             healthy_reward = (
-                self._healthy_reward * jp.ones(self.num_humanoids) * (is_healthy)
+                self._healthy_reward * jp.ones(self.num_humanoids) * is_healthy
             )
         else:
             healthy_reward = (
@@ -330,7 +339,7 @@ class Humanoid(PipelineEnv):
 
         obs = self._get_obs(pipeline_state, action)
         reward = forward_reward + healthy_reward - ctrl_cost + uph_cost + chase_reward
-        done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
+        done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         humanoids_z = jp.concatenate(
             [

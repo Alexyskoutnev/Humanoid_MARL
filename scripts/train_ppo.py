@@ -21,6 +21,15 @@ def debug_config(config: Dict) -> Dict:
     return config.update(update_config)
 
 
+def load_reward_config(path: str, env) -> Dict:
+    if env == "humanoid":
+        path = os.path.join(CONFIG_REWARD, "reward_humanoid.yaml")
+    elif env == "humanoids":
+        path = os.path.join(CONFIG_REWARD, "reward_humanoids.yaml")
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
     print(f"USING GPU {gpu_index}")
@@ -31,12 +40,12 @@ def main():
         config = yaml.safe_load(f)
         if config["debug"]:
             debug_config(config)
-    with open(CONFIG_REWARD, "r") as f:
-        env_config = yaml.safe_load(f)
+    env_config = load_reward_config(CONFIG_REWARD, env_name)
     # ================ Config ================
     # ================ Logging ===============
     if not config["debug"]:
-        logger = WandbLogger(project_name, config=config)
+        gpu_info = f"GPU {gpu_index} | env_name {env_name}"
+        logger = WandbLogger(project_name, config=config, notes=gpu_info)
         config["logger"] = logger
     # ================ Progress Function ================
     xdata = []
