@@ -13,8 +13,8 @@ class WandbLogger:
         "first_obs",
     ]
 
-    def __init__(self, project_name="", config: Dict = {}) -> None:
-        wandb.init(project=project_name, config=config)
+    def __init__(self, project_name="", config: Dict = {}, notes: str = "") -> None:
+        wandb.init(project=project_name, config=config, notes=notes)
 
     def log_train(
         self, info: Dict[str, torch.Tensor], rewards: List[float], num_agents: int
@@ -39,7 +39,12 @@ class WandbLogger:
         wandb.log(log_data)
 
     def log_eval(
-        self, episode_reward: float, sps: float, eval_sps: float, total_loss: float
+        self,
+        episode_reward: float,
+        sps: float,
+        eval_sps: float,
+        total_loss: float,
+        running_mean_reward: float,
     ) -> None:
         wandb.log(
             {
@@ -47,6 +52,7 @@ class WandbLogger:
                 "speed/sps": sps,
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
+                "eval/running_mean": running_mean_reward,
             }
         )
 
@@ -63,3 +69,6 @@ class WandbLogger:
                 "losses/entropy_loss": entropy_loss,
             }
         )
+
+    def log_running_mean(self, running_mean: float) -> None:
+        wandb.log({"eval/running_mean": running_mean})
