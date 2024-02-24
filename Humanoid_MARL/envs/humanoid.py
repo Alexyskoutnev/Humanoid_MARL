@@ -184,6 +184,7 @@ class Humanoid(PipelineEnv):
         healthy_z_range=(1.0, 2.0),
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
+        dummy_dims=0,
         backend="generalized",
         **kwargs,
     ):
@@ -233,6 +234,7 @@ class Humanoid(PipelineEnv):
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
+        self._dummy_dims = dummy_dims
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -338,6 +340,19 @@ class Humanoid(PipelineEnv):
         qfrc_actuator = actuator.to_tau(
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
+
+        if self._dummy_dims > 0:
+            dummy_vals = jp.zeros(self._dummy_dims)
+            return jp.concatenate(
+                [
+                    position,
+                    velocity,
+                    com_inertia.ravel(),
+                    com_velocity.ravel(),
+                    qfrc_actuator,
+                    dummy_vals,
+                ]
+            )
 
         # external_contact_forces are excluded
         return jp.concatenate(

@@ -259,6 +259,7 @@ class Humanoid(PipelineEnv):
             "x_velocity": zero_init,
             "y_velocity": zero_init,
             "z_position": zero_init,
+            "steps": 0,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -312,7 +313,6 @@ class Humanoid(PipelineEnv):
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
         pipeline_state = self.pipeline_step(pipeline_state0, action)
-
         com_before, *_ = self._com(pipeline_state0)
         com_after, *_ = self._com(pipeline_state)
         velocity = (com_after - com_before) / self.dt
@@ -365,6 +365,7 @@ class Humanoid(PipelineEnv):
             y_velocity=velocity[:, 1],
             z_position=humanoids_z,
             standup_reward=uph_cost,
+            steps=state.info["steps"],
         )
 
         return state.replace(

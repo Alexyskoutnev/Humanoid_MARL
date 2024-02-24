@@ -149,7 +149,7 @@ def train_unroll(
     sd = StepData([], [], [], [], [], [])
     for _ in range(num_unrolls):
         one_unroll = StepData([observation], [], [], [], [], [])
-        for _ in range(unroll_length):
+        for i in range(unroll_length):
             logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
@@ -159,12 +159,12 @@ def train_unroll(
             one_unroll.done.append(done)
             one_unroll.truncation.append(info["truncation"])
             rewards = torch.sum(reward, dim=0) / reward.shape[0]
+            if not debug:
+                logger.log_train(info=info, rewards=rewards, num_agents=len(agents))
         # Apply torch.stack to each field in one_unroll
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
         sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
-        if not debug:
-            logger.log_train(info=info, rewards=rewards, num_agents=len(agents))
     # Apply torch.stack to each field in sd
     td = sd_map(torch.stack, sd)
     return observation, td
@@ -245,6 +245,7 @@ def train(
     model_path: str = None,
     env_config: Dict[str, Any] = {},
     eval_flag: bool = True,
+    runnning_avg_length: int = 3,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
     """Trains a policy via PPO."""
@@ -326,7 +327,7 @@ def train(
                 "speed/sps": sps,
                 "speed/eval_sps": eval_sps,
                 "losses/total_loss": total_loss,
-                "eval/episode_reward_mean": np.mean(running_mean[5:]),
+                "eval/episode_reward_mean": np.mean(running_mean[runnning_avg_length:]),
             }
             if not debug:
                 logger.log_eval(
@@ -334,7 +335,7 @@ def train(
                     sps=sps,
                     eval_sps=eval_sps,
                     total_loss=total_loss,
-                    running_mean_reward=np.mean(running_mean[2:]),
+                    running_mean_reward=np.mean(running_mean[runnning_avg_length:]),
                 )
                 progress_fn(total_steps, progress)
             # Save model functionality
@@ -353,6 +354,7 @@ def train(
         num_steps = batch_size * num_minibatches * unroll_length
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         if num_epochs <= 0:
+            # breakpoint()
             raise ValueError(
                 "num_timesteps too low for given batch size and unroll length"
             )
@@ -360,7 +362,6 @@ def train(
         total_loss = 0
         t = time.time()
         for num_epoch in range(num_epochs):
-            # print(f"Current Epoch [{num_epoch}] / [{num_epochs}]")
             observation, td = train_unroll(
                 agents,
                 env,
@@ -398,13 +399,11 @@ def train(
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                        # print(f"mini_loss [{minibatch_i}] | {loss}")
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-                # print(f"loss [{update_epoch}] | {total_loss}")
 
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)

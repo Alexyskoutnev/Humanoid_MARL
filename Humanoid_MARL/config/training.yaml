@@ -2,7 +2,7 @@ num_timesteps: 100000000
 eval_reward_limit: 9000
 eval_frequency: 500
 episode_length: 1000
-unroll_length: 10
+unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.97
@@ -18,3 +18,4 @@ eval_flag : true
 notebook: false
 # model_path : null
 model_path: ./models/20240226_092325_ppo_humanoids_standing.pt
+runnning_avg_length : 3
