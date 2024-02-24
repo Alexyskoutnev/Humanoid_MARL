@@ -1,5 +1,5 @@
-num_timesteps: 1000000000
-eval_reward_limit: 10000
+num_timesteps: 50000000
+eval_reward_limit: 9000
 eval_frequency: 100
 episode_length: 1000
 unroll_length: 10
@@ -15,5 +15,5 @@ device: cuda
 debug: false
 device_idx: 0
 notebook: false
-model_path : null
-# model_path: ./models/20240223_155801_ppo_humanoids.pt
+# model_path : null
+model_path: ./models/20240226_082641_ppo_humanoids_standing.pt

@@ -65,10 +65,13 @@ def create(
       env: an environment
     """
     env = _envs[env_name](**kwargs)
-    try:
-        device_name = jax.local_devices()[int(device_idx)]
-    except:
-        device_name = jax.local_devices()[0]
+    if device_idx == None:
+        device_name = "cpu"
+    else:
+        try:
+            device_name = jax.local_devices()[int(device_idx)]
+        except:
+            device_name = jax.local_devices()[0]
 
     if episode_length is not None:
         env = training.EpisodeWrapper(env, episode_length, action_repeat)

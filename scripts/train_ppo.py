@@ -7,6 +7,7 @@ from typing import Dict
 
 from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
+from Humanoid_MARL.utils.utils import load_reward_config
 from Humanoid_MARL import CONFIG_TRAIN, CONFIG_NETWORK, CONFIG_REWARD
 
 
@@ -21,20 +22,11 @@ def debug_config(config: Dict) -> Dict:
     return config.update(update_config)
 
 
-def load_reward_config(path: str, env) -> Dict:
-    if env == "humanoid":
-        path = os.path.join(CONFIG_REWARD, "reward_humanoid.yaml")
-    elif env == "humanoids":
-        path = os.path.join(CONFIG_REWARD, "reward_humanoids.yaml")
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
-
-
 def main():
     gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
     print(f"USING GPU {gpu_index}")
     env_name = "humanoids"
-    project_name = f"MARL_ppo_{env_name}_or"
+    project_name = f"MARL_ppo_{env_name}_or_run"
     # ================ Config ================
     with open(CONFIG_TRAIN, "r") as f:
         config = yaml.safe_load(f)
