@@ -72,7 +72,7 @@ def main():
 
     # ================ Progress Function ================
     if config["debug"]:
-        train(**config, progress_fn=None)
+        train(**config, progress_fn=None, env_config=env_config)
     else:
         train(**config, progress_fn=progress, env_config=env_config)
     print(f"time to jit: {times[1] - times[0]}")

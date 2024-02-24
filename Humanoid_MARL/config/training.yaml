@@ -1,5 +1,5 @@
-num_timesteps: 500000000
-eval_reward_limit: 5000
+num_timesteps: 1000000000
+eval_reward_limit: 10000
 eval_frequency: 100
 episode_length: 1000
 unroll_length: 10
@@ -12,7 +12,8 @@ num_envs: 2048
 batch_size: 512
 env_name: humanoids
 device: cuda
-debug: False
+debug: false
 device_idx: 0
 notebook: false
-model_path: ./models/20240223_124515_ppo_humanoid_copy_2.pt
+model_path : null
+# model_path: ./models/20240223_155801_ppo_humanoids.pt

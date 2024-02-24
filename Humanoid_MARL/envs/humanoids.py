@@ -186,6 +186,7 @@ class Humanoid(PipelineEnv):
         or_done_flag=False,
         and_done_flag=True,
         chase_reward=False,
+        include_other_agents_state=False,
         backend="generalized",
         num_humanoids=2,
         **kwargs,
@@ -202,6 +203,8 @@ class Humanoid(PipelineEnv):
             self._position_dim = 22
         else:
             self._position_dim = 24
+        if include_other_agents_state:
+            self._other_agent_obs = 2
         self._velocity_dim = 23
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
@@ -223,6 +226,7 @@ class Humanoid(PipelineEnv):
         self._chase_reward = chase_reward
         self._or_done_flag = or_done_flag
         self._and_done_flag = and_done_flag
+        self._include_other_agents_state = include_other_agents_state
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -396,6 +400,10 @@ class Humanoid(PipelineEnv):
             mass_sum = self._flatten(
                 mass_sum[0]
             )  # double check that mass_sum arent different btw the two robots
+            if self._include_other_agents_state:
+                position_other_agent = position[np.array([24, 25, 0, 1])]
+                position_other_agent = reshape_vector(position_other_agent, (-1, 2))
+                position_other_agent = jp.flip(position_other_agent, axis=0).ravel()
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -415,15 +423,27 @@ class Humanoid(PipelineEnv):
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
         # external_contact_forces are excluded
-        return jp.concatenate(
-            [
-                position,
-                velocity,
-                com_inertia.ravel(),
-                com_velocity.ravel(),
-                qfrc_actuator,
-            ]
-        )
+        if self._include_other_agents_state:
+            return jp.concatenate(
+                [
+                    position,
+                    velocity,
+                    com_inertia.ravel(),
+                    com_velocity.ravel(),
+                    qfrc_actuator,
+                    position_other_agent,
+                ]
+            )
+        else:
+            return jp.concatenate(
+                [
+                    position,
+                    velocity,
+                    com_inertia.ravel(),
+                    com_velocity.ravel(),
+                    qfrc_actuator,
+                ]
+            )
 
     def _com(self, pipeline_state: base.State) -> jax.Array:
         inertia = self.sys.link.inertia
@@ -446,14 +466,25 @@ class Humanoid(PipelineEnv):
     @property
     def dims(self):
         action_dim = int(self.sys.act_size() / self.num_humanoids)
-        return (
-            self._position_dim,
-            self._velocity_dim,
-            self._com_inertia_dim,
-            self._com_velocity_dim,
-            self._q_actuator_dim,
-            action_dim,
-        )
+        if self._include_other_agents_state:
+            return (
+                self._position_dim,
+                self._velocity_dim,
+                self._com_inertia_dim,
+                self._com_velocity_dim,
+                self._q_actuator_dim,
+                self._other_agent_obs,
+                action_dim,
+            )
+        else:
+            return (
+                self._position_dim,
+                self._velocity_dim,
+                self._com_inertia_dim,
+                self._com_velocity_dim,
+                self._q_actuator_dim,
+                action_dim,
+            )
 
     @property
     def obs_dims(self):
