@@ -241,9 +241,10 @@ def train(
     debug: bool = False,
     device_idx: int = 0,
     logger=None,
-    notebook=False,
+    notebook: bool = False,
     model_path: str = None,
     env_config: Dict[str, Any] = {},
+    eval_flag: bool = True,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
     """Trains a policy via PPO."""
@@ -308,7 +309,7 @@ def train(
     total_steps = 0
     total_loss = 0
     for eval_i in range(eval_frequency + 1):
-        if progress_fn:
+        if eval_flag:
             t = time.time()
             with torch.no_grad():
                 episode_count, episode_reward = eval_unroll(

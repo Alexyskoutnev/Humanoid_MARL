@@ -34,7 +34,7 @@ def save_models(
     print(f"Agents saved to {filename}")
 
 
-def load_models(filename: str, agent_class: Agent, device: str = "cuda") -> List[Agent]:
+def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[Agent]:
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
     agents = []

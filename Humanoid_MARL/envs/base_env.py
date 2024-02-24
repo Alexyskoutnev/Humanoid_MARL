@@ -141,7 +141,6 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         )
         obs_space = spaces.Box(-obs, obs, dtype="float32")
         self.observation_space = utils.batch_space(obs_space, self.num_envs)
-
         self.obs_dims = env.observation_size // self.num_agents
 
         if hasattr(env, "obs_dims"):

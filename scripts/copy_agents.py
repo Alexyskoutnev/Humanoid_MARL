@@ -22,6 +22,6 @@ def copy(file_path: str, num_agents: int = 2):
 
 
 if __name__ == "__main__":
-    single_agent_torch_pt = "20240223_145117_ppo_humanoid.pt"
+    single_agent_torch_pt = "20240226_092325_ppo_humanoid_standing.pt"
     model_file = os.path.join("models", single_agent_torch_pt)
     copy(model_file)
