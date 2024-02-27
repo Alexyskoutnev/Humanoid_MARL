@@ -1,6 +1,6 @@
 terminate_when_unhealthy: true
 exclude_current_positions_from_observation: true
-forward_reward_weight: 2.0
+forward_reward_weight: 0.0
 ctrl_cost_weight: 0.1
 healthy_reward: 5.0
 dummy_dims : 2

@@ -20,6 +20,7 @@ import torch
 from torch import nn
 from torch import optim
 import torch.nn.functional as F
+from brax.envs.base import Env
 
 # Humandoid MARL
 from Humanoid_MARL import envs
@@ -27,8 +28,6 @@ from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
-
-SAVE_MODELS = "./models"
 
 
 StepData = collections.namedtuple(
@@ -70,6 +69,7 @@ def eval_unroll(
     length: int = 1000,
     device: str = "cpu",
     get_jax_state: bool = False,
+    get_full_state: bool = False,
 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
@@ -78,7 +78,9 @@ def eval_unroll(
     frames = []
     num_resets = 1
     for i in range(length):
-        _, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
+        _, action = get_agent_actions(
+            agents, observation, env.obs_dims_tuple, get_full_state
+        )
         if get_jax_state:
             jax_state, observation, reward, done, _ = env.step(
                 Agent.dist_postprocess(action)
@@ -93,7 +95,11 @@ def eval_unroll(
         return episodes, episode_reward / episodes
 
 
-def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int):
+def get_obs(
+    obs: torch.Tensor, dims: Tuple[int], num_agents: int, get_full_state: bool = False
+) -> torch.Tensor:
+    if get_full_state:
+        return obs
     if type(dims) == int:  # TODO: FIX THIS, just assume one type of observation for now
         total_obs = dims
     else:
@@ -116,7 +122,10 @@ def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int):
 
 
 def get_agent_actions(
-    agents: List[Agent], observation: torch.Tensor, dims: Tuple[int]
+    agents: List[Agent],
+    observation: torch.Tensor,
+    dims: Tuple[int],
+    get_full_state: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     num_agents = len(agents)
     if num_agents == 1:
@@ -129,7 +138,7 @@ def get_agent_actions(
         if len(observation.shape) == 1:  # Used for single enviroment for evaluation
             observation = observation.reshape(1, -1)
         observation = get_obs(
-            observation, dims, num_agents
+            observation, dims, num_agents, get_full_state=get_full_state
         )  # [#envs, #num_agents, obs]
         logits, actions = [], []
         for idx, agent in enumerate(agents):
@@ -143,14 +152,23 @@ def get_agent_actions(
 
 
 def train_unroll(
-    agents, env, observation, num_unrolls, unroll_length, debug=False, logger=None
+    agents,
+    env,
+    observation,
+    num_unrolls,
+    unroll_length,
+    debug=False,
+    logger=None,
+    get_full_state=False,
 ):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
     for _ in range(num_unrolls):
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
-            logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
+            logits, action = get_agent_actions(
+                agents, observation, env.obs_dims_tuple, get_full_state
+            )
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
@@ -171,18 +189,23 @@ def train_unroll(
 
 
 def update_normalization(
-    agents: List[Agent], observation: torch.Tensor, dims: Tuple[int]
+    agents: List[Agent],
+    observation: torch.Tensor,
+    dims: Tuple[int],
+    get_full_state: bool = False,
 ) -> None:
     num_agents = len(agents)
     observation = observation.view(observation.shape[0] * observation.shape[1], -1)
-    # if len(observation.shape) == 1:
     if num_agents == 1:
         agent = agents[0]
         agent.update_normalization(observation)
     else:
-        obs = get_obs(observation, dims, num_agents)
+        obs = get_obs(observation, dims, num_agents, get_full_state=get_full_state)
         for idx, agent in enumerate(agents):
-            agent.update_normalization(obs[:, idx, :])
+            if get_full_state:
+                agent.update_normalization(obs[:])
+            else:
+                agent.update_normalization(obs[:, idx, :])
 
 
 def unroll_first(data):
@@ -195,6 +218,7 @@ def reshape_minibatch(
     minibatch_idx: int,
     dims: Tuple[int] = (24, 23, 110, 66, 23),
     num_agents: int = 2,
+    get_full_state: bool = False,
 ) -> torch.Tensor:
     """
     Reshape and index into a minibatch of trajectories.
@@ -215,11 +239,84 @@ def reshape_minibatch(
     )
     observation = epoch_td.reshape(-1, epoch_td.shape[3])
     if num_agents > 1:
-        epoch_td = get_obs(observation, dims, num_agents)
+        epoch_td = get_obs(observation, dims, num_agents, get_full_state=get_full_state)
     epoch_td = epoch_td.reshape(
         *(minibatch_dim, unroll_length_dim, batch_size), num_agents, -1
     )  # Might be wrong
     return epoch_td[minibatch_idx, :, :, :, :]
+
+
+def setup_env(
+    env_name: str,
+    num_envs: int,
+    episode_length: int,
+    device_idx: int,
+    env_config: Dict,
+    full_state: bool,
+    device="cuda",
+) -> Env:
+    env = envs.create(
+        env_name,
+        batch_size=num_envs,
+        episode_length=episode_length,
+        device_idx=device_idx,
+        **env_config,
+    )
+    env = VectorGymWrapper(env, full_state=full_state)
+    # automatically convert between jax ndarrays and torch tensors:
+    env = torch_wrapper.TorchWrapper(env, device=device)
+    return env
+
+
+def setup_agents(
+    env_name: str,
+    device: str,
+    model_path: str,
+    reward_scaling: float,
+    entropy_cost: float,
+    discounting: float,
+    learning_rate: float,
+    env: Env,
+) -> Tuple[List[Agent], List[optim.Optimizer]]:
+    def create_agent() -> Agent:
+        return Agent(**network_arch).to(device)
+
+    policy_layers = [env.obs_dims, 64, 64, 64, env.action_space.shape[-1] * 2]
+    value_layers = [env.obs_dims, 64, 64, 64, 1]
+
+    network_arch = {
+        "policy_layers": policy_layers,
+        "value_layers": value_layers,
+        "entropy_cost": entropy_cost,
+        "discounting": discounting,
+        "reward_scaling": reward_scaling,
+        "device": device,
+    }
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    model_name = f"{timestamp}_ppo_{env_name}.pt"
+
+    optimizers = []
+    agents = []
+
+    if model_path:
+        try:
+            agents = load_models(model_path, Agent, device=device)
+            optimizers = [
+                optim.Adam(agent.parameters(), lr=float(learning_rate))
+                for agent in agents
+            ]
+        except Exception as e:
+            print(f"Failed to load model: {e}")
+            exit()
+    else:
+        agents = [create_agent() for _ in range(env.num_agents)]
+        optimizers = [
+            optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
+        ]
+
+    agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    return agents, optimizers, model_name, network_arch
 
 
 def train(
@@ -246,75 +343,52 @@ def train(
     env_config: Dict[str, Any] = {},
     eval_flag: bool = True,
     runnning_avg_length: int = 3,
+    full_state: bool = False,  # Enable every agent see eac
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
 ) -> List[Agent]:
+
     """Trains a policy via PPO."""
-    env = envs.create(
+    env = setup_env(
         env_name,
-        batch_size=num_envs,
-        episode_length=episode_length,
-        backend="generalized",
-        device_idx=device_idx,
-        **env_config,
+        num_envs,
+        episode_length,
+        device_idx,
+        env_config,
+        full_state,
+        device=device,
     )
-    env = VectorGymWrapper(env)
-    # automatically convert between jax ndarrays and torch tensors:
-    env = torch_wrapper.TorchWrapper(env, device=device)
-    # env warmup
+    # ========= env warmup (for JIT) =========
     obs = env.reset()
+    print("Env dims: ", env.obs_dims)
     action = torch.zeros(
         (env.action_space.shape[0], env.action_space.shape[1] * env.num_agents)
     ).to(device)
     env.step(action)
-    # create the agent
-    policy_layers = [
-        env.obs_dims,
-        64,
-        64,
-        64,
-        env.action_space.shape[-1] * 2,
-    ]
-    value_layers = [env.obs_dims, 64, 64, 64, 1]
-
-    network_arch = {
-        "policy_layers": policy_layers,
-        "value_layers": value_layers,
-        "entropy_cost": entropy_cost,
-        "discounting": discounting,
-        "reward_scaling": reward_scaling,
-        "device": device,
-    }
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_name = f"{timestamp}_ppo_{env_name}.pt"
+    # ========= env warmup (for JIT) =========
+    # ========= training vars ================
     running_mean = list()
-    optimizers = []
-    agents = []
-    if model_path:
-        try:
-            agents = load_models(model_path, Agent, device=device)
-            for agent_idx in range(env.num_agents):
-                optimizers.append(
-                    optim.Adam(agents[agent_idx].parameters(), lr=float(learning_rate))
-                )
-        except:
-            print("Failed to load model")
-            exit()
-    else:
-        for agent_idx in range(env.num_agents):
-            agents.append(Agent(**network_arch).to(device))
-            optimizers.append(
-                optim.Adam(agents[agent_idx].parameters(), lr=learning_rate)
-            )
-    agents = [torch.jit.script(agent.to(device)) for agent in agents]
     sps = 0
     total_steps = 0
     total_loss = 0
+    # ========= training vars ================
+    # ========= create the agent =============
+    agents, optimizers, model_name, network_arch = setup_agents(
+        env_name,
+        device,
+        model_path,
+        reward_scaling,
+        entropy_cost,
+        discounting,
+        learning_rate,
+        env,
+    )
+    # ========= create the agent =============
     for eval_i in range(eval_frequency + 1):
         if eval_flag:
             t = time.time()
             with torch.no_grad():
                 episode_count, episode_reward = eval_unroll(
-                    agents, env, episode_length, device
+                    agents, env, episode_length, device, get_full_state=full_state
                 )
             duration = time.time() - t
             episode_avg_length = env.num_envs * episode_length / episode_count
@@ -337,7 +411,8 @@ def train(
                     total_loss=total_loss,
                     running_mean_reward=np.mean(running_mean[runnning_avg_length:]),
                 )
-                progress_fn(total_steps, progress)
+                if progress_fn:
+                    progress_fn(total_steps, progress)
             # Save model functionality
             try:
                 save_models(
@@ -354,7 +429,6 @@ def train(
         num_steps = batch_size * num_minibatches * unroll_length
         num_epochs = num_timesteps // (num_steps * eval_frequency)
         if num_epochs <= 0:
-            # breakpoint()
             raise ValueError(
                 "num_timesteps too low for given batch size and unroll length"
             )
@@ -370,10 +444,13 @@ def train(
                 unroll_length,
                 debug=debug,
                 logger=logger,
+                get_full_state=full_state,
             )
             td = sd_map(unroll_first, td)
             # update normalization statistics
-            update_normalization(agents, td.observation, env.obs_dims_tuple)
+            update_normalization(
+                agents, td.observation, env.obs_dims_tuple, get_full_state=full_state
+            )
             epoch_loss = 0.0
             for update_epoch in range(num_update_epochs):
                 # shuffle and batch the data
@@ -396,6 +473,7 @@ def train(
                         minibatch_idx=minibatch_i,
                         dims=env.obs_dims_tuple,
                         num_agents=env.num_agents,
+                        get_full_state=full_state,
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)

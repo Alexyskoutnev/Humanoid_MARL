@@ -8,7 +8,9 @@ from typing import Dict
 from Humanoid_MARL.agent.ppo.train_torch import train
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import load_reward_config
-from Humanoid_MARL import CONFIG_TRAIN, CONFIG_NETWORK, CONFIG_REWARD
+from Humanoid_MARL import CONFIG_TRAIN, CONFIG_REWARD
+
+gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
 
 
 def debug_config(config: Dict) -> Dict:
@@ -23,15 +25,16 @@ def debug_config(config: Dict) -> Dict:
 
 
 def main():
-    gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
-    print(f"USING GPU {gpu_index}")
-    env_name = "humanoids"
-    project_name = f"MARL_ppo_{env_name}_or_run"
+    print(f"======Using GPU {gpu_index}======")
     # ================ Config ================
     with open(CONFIG_TRAIN, "r") as f:
         config = yaml.safe_load(f)
         if config["debug"]:
             debug_config(config)
+            env_name = config["env_name"] + "_debug"
+        else:
+            env_name = config["env_name"]
+    project_name = f"MARL_ppo_{env_name}"
     env_config = load_reward_config(CONFIG_REWARD, env_name)
     # ================ Config ================
     # ================ Logging ===============
@@ -39,25 +42,15 @@ def main():
         gpu_info = f"GPU {gpu_index} | env_name {env_name}"
         logger = WandbLogger(project_name, config=config, notes=gpu_info)
         config["logger"] = logger
-    # ================ Progress Function ================
-    xdata = []
-    ydata = []
-    eval_sps = []
-    train_sps = []
+    # ================ Timing ================
     times = [datetime.now()]
-
-    def progress(num_steps, metrics, path="./data/ppo", name="ppo_training_plot.png"):
-        pass
-
-    # ================ Progress Function ================
+    # ================ Timing ================
     if config["debug"]:
-        train(**config, progress_fn=None, env_config=env_config)
+        train(**config, env_config=env_config)
     else:
-        train(**config, progress_fn=progress, env_config=env_config)
+        train(**config, env_config=env_config)
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
-    print(f"eval steps/sec: {np.mean(eval_sps)}")
-    print(f"train steps/sec: {np.mean(train_sps)}")
 
 
 if __name__ == "__main__":

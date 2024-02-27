@@ -8,7 +8,6 @@ class WandbLogger:
 
     _skipped_keys: ClassVar[List[str]] = [
         "first_pipeline_state",
-        "steps",
         "truncation",
         "first_obs",
     ]
@@ -25,6 +24,8 @@ class WandbLogger:
             for key, _ in info.items():
                 if key in WandbLogger._skipped_keys:
                     continue
+                if key == "steps":
+                    log_data.update({key: info[key]})
                 else:
                     try:
                         log_data.update(

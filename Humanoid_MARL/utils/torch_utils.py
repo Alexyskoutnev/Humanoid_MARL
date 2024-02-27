@@ -37,7 +37,8 @@ def save_models(
 def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[Agent]:
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
-    agents = []
+    num_agents = len(state_dicts["agents"])
+    agents = [None for _ in range(num_agents)]
 
     for agent_dict in state_dicts["agents"]:
         index = agent_dict["index"]
@@ -48,8 +49,10 @@ def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[
         agent.running_variance = agent_dict[f"running_variance_{index}"]
         agent.num_steps = agent_dict[f"num_steps_{index}"]
         agent.eval()
-        agents.append(agent)
+        agents[index] = agent
     if len(agents) == 0:
         raise ValueError("No agents loaded")
+    if any([a is None for a in agents]):
+        raise ValueError("Some agents failed to load")
     print(f"Models loaded from {filename}")
     return agents
