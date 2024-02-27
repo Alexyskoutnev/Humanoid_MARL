@@ -316,7 +316,9 @@ class Humanoid(PipelineEnv):
         com_before, *_ = self._com(pipeline_state0)
         com_after, *_ = self._com(pipeline_state)
         velocity = (com_after - com_before) / self.dt
-        forward_reward = self._forward_reward_weight * velocity[:, 0]
+        forward_reward = self._forward_reward_weight * jp.sqrt(
+            velocity[:, 0] ** 2 + velocity[:, 1] ** 2
+        )
         chase_reward = jp.zeros(2)
 
         if self._standup_reward:

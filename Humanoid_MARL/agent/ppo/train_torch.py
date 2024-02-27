@@ -70,6 +70,7 @@ def eval_unroll(
     device: str = "cpu",
     get_jax_state: bool = False,
     get_full_state: bool = False,
+    agent_config: Dict[str, Any] = {},
 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
     observation = env.reset()
@@ -79,7 +80,7 @@ def eval_unroll(
     num_resets = 1
     for i in range(length):
         _, action = get_agent_actions(
-            agents, observation, env.obs_dims_tuple, get_full_state
+            agents, observation, env.obs_dims_tuple, get_full_state, agent_config={}
         )
         if get_jax_state:
             jax_state, observation, reward, done, _ = env.step(
@@ -126,6 +127,7 @@ def get_agent_actions(
     observation: torch.Tensor,
     dims: Tuple[int],
     get_full_state: bool = False,
+    agent_config: Dict[str, Any] = {},
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     num_agents = len(agents)
     if num_agents == 1:
@@ -146,6 +148,8 @@ def get_agent_actions(
                 logit, action = agent.get_logits_action(observation)
             else:
                 logit, action = agent.get_logits_action(observation[:, idx, :])
+            if agent_config.get("freeze_idx") == idx:
+                action = torch.ones_like(action) * 0.01
             logits.append(logit)
             actions.append(action)
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
@@ -160,6 +164,7 @@ def train_unroll(
     debug=False,
     logger=None,
     get_full_state=False,
+    agent_config={},
 ):
     """Return step data over multple unrolls."""
     sd = StepData([], [], [], [], [], [])
@@ -167,7 +172,7 @@ def train_unroll(
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
             logits, action = get_agent_actions(
-                agents, observation, env.obs_dims_tuple, get_full_state
+                agents, observation, env.obs_dims_tuple, get_full_state, agent_config
             )
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
@@ -176,9 +181,8 @@ def train_unroll(
             one_unroll.reward.append(reward)
             one_unroll.done.append(done)
             one_unroll.truncation.append(info["truncation"])
-            rewards = torch.sum(reward, dim=0) / reward.shape[0]
             if not debug:
-                logger.log_train(info=info, rewards=rewards, num_agents=len(agents))
+                logger.log_train(info=info, rewards=reward, num_agents=len(agents))
         # Apply torch.stack to each field in one_unroll
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
@@ -345,6 +349,7 @@ def train(
     runnning_avg_length: int = 3,
     full_state: bool = False,  # Enable every agent see eac
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
+    agent_config: Dict[str, Any] = {},
 ) -> List[Agent]:
 
     """Trains a policy via PPO."""
@@ -388,7 +393,12 @@ def train(
             t = time.time()
             with torch.no_grad():
                 episode_count, episode_reward = eval_unroll(
-                    agents, env, episode_length, device, get_full_state=full_state
+                    agents,
+                    env,
+                    episode_length,
+                    device,
+                    get_full_state=full_state,
+                    agent_config=agent_config,
                 )
             duration = time.time() - t
             episode_avg_length = env.num_envs * episode_length / episode_count
@@ -445,6 +455,7 @@ def train(
                 debug=debug,
                 logger=logger,
                 get_full_state=full_state,
+                agent_config=agent_config,
             )
             td = sd_map(unroll_first, td)
             # update normalization statistics
