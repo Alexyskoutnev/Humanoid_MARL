@@ -11,6 +11,7 @@ class WandbLogger:
         "truncation",
         "first_obs",
     ]
+    _agent_name_map: ClassVar[Dict[int, str]] = {0: "persuader", 1: "evader"}
 
     def __init__(self, project_name="", config: Dict = {}, notes: str = "") -> None:
         wandb.init(project=project_name, config=config, notes=notes)
@@ -20,7 +21,7 @@ class WandbLogger:
     ) -> None:
         log_data = {}
         for i in range(num_agents):
-            agent_prefix = f"_h{i+1}" if num_agents > 1 else ""
+            agent_prefix = f"_{self._agent_name_map[i]}" if num_agents > 1 else ""
             for key, _ in info.items():
                 if key in WandbLogger._skipped_keys:
                     continue
