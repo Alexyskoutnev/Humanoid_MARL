@@ -18,9 +18,9 @@ def seed_everything(seed):
 
 
 def load_reward_config(path: str, env) -> Dict:
-    if env == "humanoid":
+    if env in ["humanoid", "humanoid_debug"]:
         path = os.path.join(CONFIG_REWARD, "reward_humanoid.yaml")
-    elif env == "humanoids":
+    elif env in ["humanoids", "humanoids_debug"]:
         path = os.path.join(CONFIG_REWARD, "reward_humanoids.yaml")
     with open(path, "r") as f:
         return yaml.safe_load(f)
