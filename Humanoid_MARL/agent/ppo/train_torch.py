@@ -176,9 +176,8 @@ def train_unroll(
             one_unroll.reward.append(reward)
             one_unroll.done.append(done)
             one_unroll.truncation.append(info["truncation"])
-            rewards = torch.sum(reward, dim=0) / reward.shape[0]
             if not debug:
-                logger.log_train(info=info, rewards=rewards, num_agents=len(agents))
+                logger.log_train(info=info, rewards=reward, num_agents=len(agents))
         # Apply torch.stack to each field in one_unroll
         one_unroll = sd_map(torch.stack, one_unroll)
         # Update the overall StepData structure by concatenating data from the current unroll
