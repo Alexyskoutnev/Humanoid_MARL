@@ -16,7 +16,7 @@ debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-model_path : null
-# model_path : ./models/20240227_115117_ppo_humanoid_standing_dim_246_copy_2.pt
+# model_path : null
+model_path : ./models/20240227_115117_ppo_humanoid_standing_dim_246_copy_2.pt
 runnning_avg_length : 3
 full_state : false

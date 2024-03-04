@@ -149,7 +149,7 @@ def get_agent_actions(
             else:
                 logit, action = agent.get_logits_action(observation[:, idx, :])
             if agent_config.get("freeze_idx") == idx:
-                action = torch.ones_like(action) * 0.01
+                action = torch.ones_like(action) * 0.1
             logits.append(logit)
             actions.append(action)
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
@@ -487,6 +487,8 @@ def train(
                         get_full_state=full_state,
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
+                        if agent_config.get("freeze_idx") == idx:
+                            continue
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
                         optimizer.zero_grad()
                         loss.backward()
