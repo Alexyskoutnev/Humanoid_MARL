@@ -186,6 +186,7 @@ class Humanoid(PipelineEnv):
         or_done_flag=False,
         and_done_flag=True,
         chase_reward=False,
+        chase_reward_inverse=True,
         include_other_agents_state=False,
         backend="generalized",
         num_humanoids=2,
@@ -218,6 +219,7 @@ class Humanoid(PipelineEnv):
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward
         self._chase_reward_weight = chase_reward_weight
+        self._chase_invese_reward = chase_reward_inverse
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
@@ -303,7 +305,10 @@ class Humanoid(PipelineEnv):
         )
         _dist_diff = jp.abs(h_1 - h_2)
         evader_reward = _dist_diff
-        persuader_reward = -_dist_diff
+        if self._chase_invese_reward:
+            persuader_reward = 1 / (_dist_diff + 1e-6)
+        else:
+            persuader_reward = -_dist_diff
         return (
             jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
             * self._chase_reward_weight
