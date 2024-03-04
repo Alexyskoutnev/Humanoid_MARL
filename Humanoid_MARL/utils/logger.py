@@ -10,6 +10,7 @@ class WandbLogger:
         "first_pipeline_state",
         "truncation",
         "first_obs",
+        "steps",
     ]
     _agent_name_map: ClassVar[Dict[int, str]] = {0: "persuader", 1: "evader"}
 
@@ -17,27 +18,25 @@ class WandbLogger:
         wandb.init(project=project_name, config=config, notes=notes)
 
     def log_train(
-        self, info: Dict[str, torch.Tensor], rewards: List[float], num_agents: int
+        self,
+        info: Dict[str, torch.Tensor],
+        rewards: torch.Tensor,
+        num_agents: int,
     ) -> None:
         log_data = {}
+        log_data["total_reward_evader"] = rewards[0][1].cpu().item()
+        log_data["total_reward_persuader"] = rewards[0][0].cpu().item()
         for i in range(num_agents):
             agent_prefix = f"_{self._agent_name_map[i]}" if num_agents > 1 else ""
             for key, _ in info.items():
                 if key in WandbLogger._skipped_keys:
                     continue
-                if key == "steps":
-                    log_data.update({key: info[key]})
-                else:
-                    try:
-                        log_data.update(
-                            {
-                                f"{key}{agent_prefix}": torch.mean(info[key], dim=0)
-                                .cpu()[i]
-                                .item()
-                            }
-                        )
-                    except Exception as e:
-                        print(f"Error logging {key}{agent_prefix}: {e}")
+                try:
+                    log_data[f"{key}{agent_prefix}"] = (
+                        torch.mean(info[key], dim=0).cpu()[i].item()
+                    )
+                except Exception as e:
+                    print(f"Error logging {key}{agent_prefix}: {e}")
         wandb.log(log_data)
 
     def log_eval(

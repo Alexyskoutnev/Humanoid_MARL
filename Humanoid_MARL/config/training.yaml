@@ -1,12 +1,12 @@
 num_timesteps: 500000000
-eval_reward_limit: 9000
-eval_frequency: 100
+eval_reward_limit: 20000
+eval_frequency: 1000
 episode_length: 1000
 unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 8
-discounting: 0.97
-learning_rate: 0.0005
+discounting: 0.99
+learning_rate: 0.0001
 entropy_cost: 0.002
 num_envs: 2048
 batch_size: 512

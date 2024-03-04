@@ -2,15 +2,16 @@ terminate_when_unhealthy: true
 include_standing_up_flag: true
 chase_reward: true
 exclude_current_positions_from_observation: true
-forward_reward_weight: 0.0
+forward_reward_weight: 0.2
 ctrl_cost_weight: 0.1
 healthy_reward: 5.0
 healthy_z_range:
   - 0.8
   - 2.5
 reset_noise_scale: 0.01
-chase_reward_weight: 2.5
+chase_reward_weight: 4.0
 standup_cost : 2.5
-and_done_flag : true
-or_done_flag : false
+and_done_flag : false
+or_done_flag : true
 include_other_agents_state: true
+chase_reward_inverse : true

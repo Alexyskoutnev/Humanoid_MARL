@@ -186,6 +186,7 @@ class Humanoid(PipelineEnv):
         or_done_flag=False,
         and_done_flag=True,
         chase_reward=False,
+        chase_reward_inverse=True,
         include_other_agents_state=False,
         backend="generalized",
         num_humanoids=2,
@@ -218,6 +219,7 @@ class Humanoid(PipelineEnv):
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward
         self._chase_reward_weight = chase_reward_weight
+        self._chase_invese_reward = chase_reward_inverse
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
@@ -302,12 +304,16 @@ class Humanoid(PipelineEnv):
             pipeline_state.x.pos[11, 0] ** 2 + pipeline_state.x.pos[11, 1] ** 2
         )
         _dist_diff = jp.abs(h_1 - h_2)
-        evader_reward = _dist_diff
-        persuader_reward = -_dist_diff
-        return (
-            jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
-            * self._chase_reward_weight
-        )
+        if self._chase_invese_reward:
+            persuader_reward = jp.exp(-_dist_diff * 0.35) * self._chase_reward_weight
+            evader_reward = (
+                -(jp.exp(-_dist_diff * 0.35) * self._chase_reward_weight)
+                + self._chase_reward_weight
+            )
+        else:
+            persuader_reward = -_dist_diff * self._chase_reward_weight
+            evader_reward = _dist_diff * self._chase_reward_weight
+        return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
@@ -316,7 +322,9 @@ class Humanoid(PipelineEnv):
         com_before, *_ = self._com(pipeline_state0)
         com_after, *_ = self._com(pipeline_state)
         velocity = (com_after - com_before) / self.dt
-        forward_reward = self._forward_reward_weight * velocity[:, 0]
+        forward_reward = self._forward_reward_weight * jp.sqrt(
+            velocity[:, 0] ** 2 + velocity[:, 1] ** 2
+        )
         chase_reward = jp.zeros(2)
 
         if self._standup_reward:
