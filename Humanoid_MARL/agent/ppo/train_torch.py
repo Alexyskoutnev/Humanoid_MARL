@@ -281,6 +281,7 @@ def setup_agents(
     discounting: float,
     learning_rate: float,
     env: Env,
+    debug: bool = False,
 ) -> Tuple[List[Agent], List[optim.Optimizer]]:
     def create_agent() -> Agent:
         return Agent(**network_arch).to(device)
@@ -318,8 +319,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-
-    agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    if not debug:
+        agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 
@@ -386,6 +387,7 @@ def train(
         discounting,
         learning_rate,
         env,
+        debug=debug,
     )
     # ========= create the agent =============
     for eval_i in range(eval_frequency + 1):

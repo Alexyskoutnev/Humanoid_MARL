@@ -178,6 +178,7 @@ class Humanoid(PipelineEnv):
         chase_reward_weight=1.0,
         healthy_reward=5.0,
         standup_cost=1.0,
+        tag_reward_weight=1.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
@@ -188,6 +189,8 @@ class Humanoid(PipelineEnv):
         chase_reward=False,
         chase_reward_inverse=True,
         include_other_agents_state=False,
+        include_full_state_other_agents=False,
+        tag_reward=False,
         backend="generalized",
         num_humanoids=2,
         **kwargs,
@@ -206,6 +209,8 @@ class Humanoid(PipelineEnv):
             self._position_dim = 24
         if include_other_agents_state:
             self._other_agent_obs = 2
+        elif include_full_state_other_agents:
+            self._other_full_state_ob = 33
         self._velocity_dim = 23
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
@@ -225,9 +230,12 @@ class Humanoid(PipelineEnv):
         self._reset_noise_scale = reset_noise_scale
         self._standup_reward = include_standing_up_flag
         self._standup_cost = standup_cost
+        self._tag_reward = tag_reward
+        self._tag_reward_weight = tag_reward_weight
         self._chase_reward = chase_reward
         self._or_done_flag = or_done_flag
         self._and_done_flag = and_done_flag
+        self._full_state_other_agents = include_full_state_other_agents
         self._include_other_agents_state = include_other_agents_state
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
@@ -261,6 +269,7 @@ class Humanoid(PipelineEnv):
             "x_velocity": zero_init,
             "y_velocity": zero_init,
             "z_position": zero_init,
+            "tag_reward": zero_init,
             "steps": 0,
         }
         return State(pipeline_state, obs, reward, done, metrics)
@@ -315,6 +324,22 @@ class Humanoid(PipelineEnv):
             evader_reward = _dist_diff * self._chase_reward_weight
         return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
+    def _tag_reward_left_hand_fn(self, pipeline_state, threshold=0.1):
+        h_1_left_hand = pipeline_state.x.pos[10]  # left_lower_arm_h1
+        h_2_limbs = pipeline_state.x.pos[11:22]
+        norms = jp.linalg.norm(h_1_left_hand - h_2_limbs, axis=-1)
+        is_below_threshold = jp.any(norms < threshold)
+        threshold_int = is_below_threshold.astype(jp.int32)
+        return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
+
+    def _tag_reward_right_hand_fn(self, pipeline_state, threshold=0.1):
+        h_1_right_hand = pipeline_state.x.pos[8]  # right_lower_arm_h1
+        h_2_limbs = pipeline_state.x.pos[11:22]
+        norms = jp.linalg.norm(h_1_right_hand - h_2_limbs, axis=-1)
+        is_below_threshold = jp.any(norms < threshold)
+        threshold_int = is_below_threshold.astype(jp.int32)
+        return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
+
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -347,10 +372,26 @@ class Humanoid(PipelineEnv):
         else:
             chase_reward = jp.zeros(2)
 
+        if self._tag_reward:
+            tag_reward_left_tag = self._tag_reward_left_hand_fn(pipeline_state)
+            tag_reward_right_tag = self._tag_reward_right_hand_fn(pipeline_state)
+            tag_reward = tag_reward_left_tag + tag_reward_right_tag
+        else:
+            tag_reward_left_tag = jp.zeros(2)
+            tag_reward_right_tag = jp.zeros(2)
+            tag_reward = jp.zeros(2)
+
         ctrl_cost = self._control_reward(action)
 
         obs = self._get_obs(pipeline_state, action)
-        reward = forward_reward + healthy_reward - ctrl_cost + uph_cost + chase_reward
+        reward = (
+            forward_reward
+            + healthy_reward
+            - ctrl_cost
+            + uph_cost
+            + chase_reward
+            + tag_reward
+        )
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         humanoids_z = jp.concatenate(
@@ -373,6 +414,7 @@ class Humanoid(PipelineEnv):
             y_velocity=velocity[:, 1],
             z_position=humanoids_z,
             standup_reward=uph_cost,
+            tag_reward=tag_reward,
             steps=state.info["steps"],
         )
 
@@ -413,6 +455,11 @@ class Humanoid(PipelineEnv):
                 position_other_agent = position[np.array([24, 25, 0, 1])]
                 position_other_agent = reshape_vector(position_other_agent, (-1, 2))
                 position_other_agent = jp.flip(position_other_agent, axis=0).ravel()
+            elif self._full_state_other_agents:
+                postitions = pipeline_state.x.pos
+                h1_pos = postitions[0:11].ravel()
+                h2_pos = postitions[11:22].ravel()
+                position_other_agent = jp.concatenate([h2_pos, h1_pos])
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -432,7 +479,7 @@ class Humanoid(PipelineEnv):
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
         # external_contact_forces are excluded
-        if self._include_other_agents_state:
+        if self._include_other_agents_state or self._full_state_other_agents:
             return jp.concatenate(
                 [
                     position,
@@ -483,6 +530,16 @@ class Humanoid(PipelineEnv):
                 self._com_velocity_dim,
                 self._q_actuator_dim,
                 self._other_agent_obs,
+                action_dim,
+            )
+        elif self._full_state_other_agents:
+            return (
+                self._position_dim,
+                self._velocity_dim,
+                self._com_inertia_dim,
+                self._com_velocity_dim,
+                self._q_actuator_dim,
+                self._other_full_state_ob,
                 action_dim,
             )
         else:

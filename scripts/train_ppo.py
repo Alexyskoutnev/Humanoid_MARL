@@ -10,7 +10,7 @@ from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import load_reward_config
 from Humanoid_MARL import CONFIG_TRAIN, CONFIG_REWARD, CONFIG_AGENT
 
-gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
 
 
 def debug_config(config: Dict) -> Dict:
@@ -42,7 +42,12 @@ def main():
     # ================ Logging ===============
     if not config["debug"]:
         gpu_info = f"GPU {gpu_index} | env_name {env_name}"
-        logger = WandbLogger(project_name, config=config, notes=gpu_info)
+        loaded_config = {
+            "config": config,
+            "env_config": env_config,
+            "agent_config": agent_config,
+        }
+        logger = WandbLogger(project_name, config=loaded_config, notes=gpu_info)
         config["logger"] = logger
     # ================ Timing ================
     times = [datetime.now()]
