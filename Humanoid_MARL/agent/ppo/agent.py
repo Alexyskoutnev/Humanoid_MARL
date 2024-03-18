@@ -4,6 +4,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from Humanoid_MARL.models.mlp import MLP
+
 
 class Agent(nn.Module):
     """Standard PPO Agent with GAE and observation normalization."""
@@ -16,22 +18,17 @@ class Agent(nn.Module):
         discounting: float,
         reward_scaling: float,
         device: str,
+        network_config: Dict = {},
     ):
         super(Agent, self).__init__()
 
-        policy = []
-        for w1, w2 in zip(policy_layers, policy_layers[1:]):
-            policy.append(nn.Linear(w1, w2))
-            policy.append(nn.SiLU())
-        policy.pop()  # drop the final activation
-        self.policy = nn.Sequential(*policy)
-
-        value = []
-        for w1, w2 in zip(value_layers, value_layers[1:]):
-            value.append(nn.Linear(w1, w2))
-            value.append(nn.SiLU())
-        value.pop()  # drop the final activation
-        self.value = nn.Sequential(*value)
+        if network_config.get("LSTM"):
+            raise NotImplementedError("LSTM not supported yet")
+        elif network_config.get("TRANSFORMER"):
+            raise NotImplementedError("Transformer not supported yet")
+        else:
+            self.policy = MLP.construct(policy_layers)
+            self.value = MLP.construct(value_layers)
 
         self.num_steps = torch.zeros((), device=device)
         self.running_mean = torch.zeros(policy_layers[0], device=device)

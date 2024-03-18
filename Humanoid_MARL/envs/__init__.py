@@ -3,15 +3,18 @@
 import functools
 from typing import Optional, Type
 
-from Humanoid_MARL.envs import humanoids, humanoid
+from Humanoid_MARL.envs import humanoids, humanoid, humanoids_wall
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
-from Humanoid_MARL.envs.wrappers import VmapWrapper
+from Humanoid_MARL.envs.wrappers import VmapWrapper, EpisodeWrapper
 import jax
 
 _envs = {
     "humanoids": humanoids.Humanoid,
+    "humanoids_debug": humanoids.Humanoid,
     "humanoid": humanoid.Humanoid,
+    "humanoids_wall": humanoids_wall.Humanoid,
+    "humanoids_wall_debug": humanoids_wall.Humanoid,
 }
 
 

@@ -283,8 +283,9 @@ def train(
     # create the agent
     policy_layers = [
         env.observation_space.shape[-1],
-        64,
-        64,
+        256,
+        256,
+        256,
         env.action_space.shape[-1] * 2,
     ]
     value_layers = [env.observation_space.shape[-1], 64, 64, 1]

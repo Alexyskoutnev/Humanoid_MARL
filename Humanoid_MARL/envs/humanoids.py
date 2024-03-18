@@ -314,9 +314,9 @@ class Humanoid(PipelineEnv):
         )
         _dist_diff = jp.abs(h_1 - h_2)
         if self._chase_invese_reward:
-            persuader_reward = jp.exp(-_dist_diff * 0.35) * self._chase_reward_weight
+            persuader_reward = jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight
             evader_reward = (
-                -(jp.exp(-_dist_diff * 0.35) * self._chase_reward_weight)
+                -(jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight)
                 + self._chase_reward_weight
             )
         else:
@@ -324,7 +324,7 @@ class Humanoid(PipelineEnv):
             evader_reward = _dist_diff * self._chase_reward_weight
         return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
-    def _tag_reward_left_hand_fn(self, pipeline_state, threshold=0.1):
+    def _tag_reward_left_hand_fn(self, pipeline_state, threshold=1.0):
         h_1_left_hand = pipeline_state.x.pos[10]  # left_lower_arm_h1
         h_2_limbs = pipeline_state.x.pos[11:22]
         norms = jp.linalg.norm(h_1_left_hand - h_2_limbs, axis=-1)
@@ -332,7 +332,7 @@ class Humanoid(PipelineEnv):
         threshold_int = is_below_threshold.astype(jp.int32)
         return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
 
-    def _tag_reward_right_hand_fn(self, pipeline_state, threshold=0.1):
+    def _tag_reward_right_hand_fn(self, pipeline_state, threshold=1.0):
         h_1_right_hand = pipeline_state.x.pos[8]  # right_lower_arm_h1
         h_2_limbs = pipeline_state.x.pos[11:22]
         norms = jp.linalg.norm(h_1_right_hand - h_2_limbs, axis=-1)

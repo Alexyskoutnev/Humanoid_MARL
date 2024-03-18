@@ -30,7 +30,7 @@ echo "Running new experiments on GPU indexes: $GPU_INDEX"
 for index in $GPU_INDEX; do
     echo "Running experiment on GPU index $index"
     ./scripts/run_experiment.sh $index
-    sleep 5
+    sleep 1
 done
 
 nvidia-smi
