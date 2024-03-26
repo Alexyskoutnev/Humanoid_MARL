@@ -27,8 +27,8 @@ class AgentLSTM(nn.Module):
             policy_layers,
             network_config["HIDDEN_SIZE"],
             num_layers=network_config["NUM_LAYERS"],
-        )
-        self.value = MLP.construct(value_layers)
+        ).to(device)
+        self.value = MLP.construct(value_layers).to(device)
 
         self.num_steps = torch.zeros((), device=device)
         self.running_mean = torch.zeros(policy_layers[0], device=device)
@@ -150,6 +150,7 @@ class AgentLSTM(nn.Module):
         ) * truncation_mask
         return vs, advantages
 
+    @torch.jit.export
     def _transform_observation(
         self, observation: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:

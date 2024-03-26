@@ -205,7 +205,7 @@ def get_agent_actions(
     agent_config: Dict[str, Any] = {},
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     num_agents = len(agents)
-    if isinstance(agents[0], Agent):
+    if isinstance(agents[0], Agent) or agents[0].original_name == "Agent":
         if num_agents == 1:
             agent = agents[0]
             if len(observation.shape) == 1:  # Used for single enviroment for evaluation
@@ -229,7 +229,7 @@ def get_agent_actions(
                 logits.append(logit)
                 actions.append(action)
             return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
-    elif isinstance(agents[0], AgentLSTM):
+    elif isinstance(agents[0], AgentLSTM) or agents[0].original_name == "AgentLSTM":
         observation = get_obs_time_series(
             observation, dims
         )  # [#envs, #time_dim, #num_agents, obs]
@@ -241,9 +241,10 @@ def get_agent_actions(
             logits.append(logit)
             actions.append(action)
         return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
-
     else:
-        raise ValueError("Agents must be of type Agent or AgentLSTM")
+        raise ValueError(
+            f"Agents must be of type Agent or AgentLSTM, {agents[0]} found."
+        )
 
 
 def train_unroll(
@@ -480,8 +481,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-    # if not debug:
-    # agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    if not debug:
+        agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 
