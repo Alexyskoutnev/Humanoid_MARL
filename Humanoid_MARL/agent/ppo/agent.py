@@ -150,23 +150,30 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
-        td_obs = td["observation"][:, :, agent_idx, :]
-        observation = self.normalize(td_obs)
-        policy_logits = self.policy(observation[:-1])
+        td_obs = td["observation"][
+            :, :, agent_idx, :
+        ]  # [unroll_length, batch_size, obs_dim]
+        observation = self.normalize(td_obs)  # [unroll_length, batch_size, obs_dim]
+        policy_logits = self.policy(
+            observation[:-1]
+        )  # [unroll_length, batch_size, action_dim] : [2, 256, 34]
         baseline = self.value(observation)
-        baseline = torch.squeeze(baseline, dim=-1)
+        baseline = torch.squeeze(
+            baseline, dim=-1
+        )  # [unroll_length, batch_size]  [3, 256]
 
         # Use last baseline value (from the value function) to bootstrap.
-        bootstrap_value = baseline[-1]
-        baseline = baseline[:-1]
-        if len(td["reward"].shape) == 2:
-            reward = td["reward"] * self.reward_scaling
+        bootstrap_value = baseline[-1]  # [256]
+        baseline = baseline[:-1]  # [unroll_length-1, batch_size] [2, 256]
+
+        if len(td["reward"].shape) == 2:  # single agent case
+            reward = td["reward"] * self.reward_scaling  # [reward_dim, batch_size]
             termination = td["done"] * (1 - td["truncation"])
             action = td["action"]
             action_agent_idx = action
             td_logits = td["logits"]
             td_logit_agent_idx = td_logits
-        else:
+        else:  # multi-agent case
             reward = td["reward"][:, :, agent_idx] * self.reward_scaling
             termination = td["done"] * (1 - td["truncation"])
 
@@ -175,20 +182,32 @@ class Agent(nn.Module):
                 td["action"].shape[1],
                 td["observation"].shape[-2],
                 -1,
-            )
-            action_agent_idx = action[:, :, agent_idx, :]
+            )  # [unroll_length, batch_size, num_agents, action_dim]
+            action_agent_idx = action[
+                :, :, agent_idx, :
+            ]  # [unroll_length, batch_size, action_dim] : [2, 246, 17]
             td_logits = td["logits"].reshape(
                 td["logits"].shape[0],
                 td["logits"].shape[1],
                 td["observation"].shape[-2],
                 -1,
-            )
-            td_logit_agent_idx = td_logits[:, :, agent_idx, :]
+            )  # [unroll_length, batch_size, num_agents, action_dim] : [2, 256, 2, 34]
+            td_logit_agent_idx = td_logits[
+                :, :, agent_idx, :
+            ]  # [unroll_length, batch_size, action_dim] : [2, 256, 34]
 
-        loc, scale = self.dist_create(td_logit_agent_idx)
-        behaviour_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
-        loc, scale = self.dist_create(policy_logits)
-        target_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
+        loc, scale = self.dist_create(
+            td_logit_agent_idx
+        )  # loc : [2, 256, 17], scale : [2, 256, 17]
+        behaviour_action_log_probs = self.dist_log_prob(
+            loc, scale, action_agent_idx
+        )  # [2, 256]
+        loc, scale = self.dist_create(
+            policy_logits
+        )  # [unroll_length-1, batch_size, action_dim], [unroll_length-1, batch_size, action_dim
+        target_action_log_probs = self.dist_log_prob(
+            loc, scale, action_agent_idx
+        )  # [2, 256]
 
         with torch.no_grad():
             vs, advantages = self.compute_gae(
@@ -198,8 +217,10 @@ class Agent(nn.Module):
                 values=baseline,
                 bootstrap_value=bootstrap_value,
             )
-        rho_s = torch.exp(target_action_log_probs - behaviour_action_log_probs)
-        surrogate_loss1 = rho_s * advantages
+        rho_s = torch.exp(
+            target_action_log_probs - behaviour_action_log_probs
+        )  # [unroll_length-1, batch_size]
+        surrogate_loss1 = rho_s * advantages  # [2, 256]
         surrogate_loss2 = rho_s.clip(1 - self.epsilon, 1 + self.epsilon) * advantages
         policy_loss = -torch.mean(torch.minimum(surrogate_loss1, surrogate_loss2))
 

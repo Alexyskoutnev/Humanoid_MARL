@@ -2,7 +2,7 @@ num_timesteps: 500000000
 eval_reward_limit: 30000
 eval_frequency: 1000
 episode_length: 1000
-unroll_length: 2
+unroll_length: 1
 num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.98
@@ -24,4 +24,4 @@ model_path : null
 # model_path : ./models/20240227_115117_ppo_humanoid_standing_dim_246_copy_2.pt
 runnning_avg_length : 3
 full_state : false
-time_series : false
+time_series : true

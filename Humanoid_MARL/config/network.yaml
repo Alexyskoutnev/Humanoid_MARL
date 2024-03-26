@@ -1,5 +1,5 @@
-MLP : true
-LSTM : false
+MLP : false
+LSTM : true
 TRANSFORMER : false
 
 POLICY_LAYERS : [277, 256, 256, 256, 34]

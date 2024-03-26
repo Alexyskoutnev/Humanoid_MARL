@@ -204,9 +204,8 @@ def get_agent_actions(
     get_full_state: bool = False,
     agent_config: Dict[str, Any] = {},
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-
+    num_agents = len(agents)
     if isinstance(agents[0], Agent):
-        num_agents = len(agents)
         if num_agents == 1:
             agent = agents[0]
             if len(observation.shape) == 1:  # Used for single enviroment for evaluation
@@ -482,7 +481,7 @@ def setup_agents(
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
     # if not debug:
-    #     agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 
@@ -629,7 +628,9 @@ def train(
                 get_full_state=full_state,
                 agent_config=agent_config,
             )
+            epoch_loss = 0.0
             if time_series:
+
                 td = sd_map_alt(unroll_first, unroll_first_time_series, td)
                 for update_epoch in range(num_update_epochs):
                     # shuffle and batch the data
@@ -656,7 +657,6 @@ def train(
                             dims=env.obs_dims_tuple,
                             num_agents=env.num_agents,
                         )
-                        # breakpoint()
                         for idx, (agent, optimizer) in enumerate(
                             zip(agents, optimizers)
                         ):
@@ -668,32 +668,6 @@ def train(
                             optimizer.step()
                             total_loss += loss
                             epoch_loss += loss
-
-                #             return data.swapaxes(0, 1)
-                #     def shuffle_batch_time_series(data : torch.Tensor) -> torch.Tensor:
-                #         data = data[:, permutation]
-                #         data = data.swapaxes(0, 1)
-                #         return data.reshape([num_minibatches, -1] + list(data.shape[2:]))
-                #     epoch_td = sd_map_alt(shuffle_batch, shuffle_batch_time_series, td)
-                #     for minibatch_i in range(num_minibatches):
-                #         breakpoint()
-                # td_minibatch = sd_map_minibatch(
-                #     reshape_minibatch,
-                #     epoch_td,
-                #     minibatch_idx=minibatch_i,
-                #     dims=env.obs_dims_tuple,
-                #     num_agents=env.num_agents,
-                #     get_full_state=full_state,
-                # )
-                # for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
-                #     if agent_config.get("freeze_idx") == idx:
-                #         continue
-                #     loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                #     optimizer.zero_grad()
-                #     loss.backward()
-                #     optimizer.step()
-                #     total_loss += loss
-                #     epoch_loss += loss
             else:
                 td = sd_map(unroll_first, td)
                 # update normalization statistics
@@ -703,8 +677,6 @@ def train(
                     env.obs_dims_tuple,
                     get_full_state=full_state,
                 )
-                epoch_loss = 0.0
-
                 for update_epoch in range(num_update_epochs):
                     # shuffle and batch the data
                     with torch.no_grad():
@@ -731,7 +703,6 @@ def train(
                             num_agents=env.num_agents,
                             get_full_state=full_state,
                         )  # -> [3, 256, 2, 277]
-                        # breakpoint()
                         for idx, (agent, optimizer) in enumerate(
                             zip(agents, optimizers)
                         ):

@@ -41,7 +41,7 @@ class AgentLSTM(nn.Module):
         self.epsilon = 0.2
         self.device = device
 
-    # @torch.jit.export
+    @torch.jit.export
     def dist_create(self, logits: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Normal followed by tanh.
 
@@ -50,7 +50,7 @@ class AgentLSTM(nn.Module):
         scale = F.softplus(scale) + 0.001
         return loc, scale
 
-    # @torch.jit.export
+    @torch.jit.export
     def dist_sample_no_postprocess(
         self, loc: torch.Tensor, scale: torch.Tensor
     ) -> torch.Tensor:
@@ -60,7 +60,7 @@ class AgentLSTM(nn.Module):
     def dist_postprocess(cls, x: torch.Tensor) -> torch.Tensor:
         return torch.tanh(x)
 
-    # @torch.jit.export
+    @torch.jit.export
     def dist_entropy(self, loc: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         entropy = 0.5 + log_normalized
@@ -70,7 +70,7 @@ class AgentLSTM(nn.Module):
         entropy = entropy + log_det_jacobian
         return entropy.sum(dim=-1)
 
-    # @torch.jit.export
+    @torch.jit.export
     def dist_log_prob(
         self, loc: torch.Tensor, scale: torch.Tensor, dist: torch.Tensor
     ) -> torch.Tensor:
@@ -80,7 +80,7 @@ class AgentLSTM(nn.Module):
         log_prob = log_unnormalized - log_normalized - log_det_jacobian
         return log_prob.sum(dim=-1)
 
-    # @torch.jit.export
+    @torch.jit.export
     def update_normalization(self, observation: torch.Tensor) -> None:
         self.num_steps += observation.shape[0] * observation.shape[1]
         input_to_old_mean = observation - self.running_mean
@@ -90,13 +90,13 @@ class AgentLSTM(nn.Module):
         var_diff = torch.sum(input_to_new_mean * input_to_old_mean, dim=(0, 1))
         self.running_variance = self.running_variance + var_diff
 
-    # @torch.jit.export
+    @torch.jit.export
     def normalize(self, observation: torch.Tensor) -> torch.Tensor:
         variance = self.running_variance / (self.num_steps + 1.0)
         variance = torch.clip(variance, 1e-6, 1e6)
         return ((observation - self.running_mean) / variance.sqrt()).clip(-5, 5)
 
-    # @torch.jit.export
+    @torch.jit.export
     def get_logits_action(
         self, observation: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -108,7 +108,7 @@ class AgentLSTM(nn.Module):
         action = self.dist_sample_no_postprocess(loc, scale)
         return logits, action
 
-    # @torch.jit.export
+    @torch.jit.export
     def compute_gae(
         self,
         truncation: torch.Tensor,
@@ -150,47 +150,60 @@ class AgentLSTM(nn.Module):
         ) * truncation_mask
         return vs, advantages
 
-    # @torch.jit.export
-    def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
-        td_obs = td["observation"][:, :, agent_idx, :]
-        observation = self.normalize(td_obs)
-        policy_logits = self.policy(observation[:-1])
-        baseline = self.value(observation)
-        baseline = torch.squeeze(baseline, dim=-1)
+    def _transform_observation(
+        self, observation: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        observation_p = observation  # [seq_len, batch_dim, obs_dim] : [4, 256, 277]
+        observation_p = observation_p.swapaxes(
+            0, 1
+        )  # [batch_dim, seq_len, obs_dim] : [256, 4, 277]
+        observation_v = observation  # [seq_len, batch_dim, obs_dim] : [4, 256, 277]
+        return observation_p, observation_v
 
-        # Use last baseline value (from the value function) to bootstrap.
-        bootstrap_value = baseline[-1]
-        baseline = baseline[:-1]
-        if len(td["reward"].shape) == 2:
-            reward = td["reward"] * self.reward_scaling
-            termination = td["done"] * (1 - td["truncation"])
-            action = td["action"]
-            action_agent_idx = action
-            td_logits = td["logits"]
-            td_logit_agent_idx = td_logits
-        else:
-            reward = td["reward"][:, :, agent_idx] * self.reward_scaling
-            termination = td["done"] * (1 - td["truncation"])
-
-            action = td["action"].reshape(
-                td["action"].shape[0],
-                td["action"].shape[1],
-                td["observation"].shape[-2],
-                -1,
-            )
-            action_agent_idx = action[:, :, agent_idx, :]
-            td_logits = td["logits"].reshape(
-                td["logits"].shape[0],
-                td["logits"].shape[1],
-                td["observation"].shape[-2],
-                -1,
-            )
-            td_logit_agent_idx = td_logits[:, :, agent_idx, :]
-
-        loc, scale = self.dist_create(td_logit_agent_idx)
-        behaviour_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
-        loc, scale = self.dist_create(policy_logits)
-        target_action_log_probs = self.dist_log_prob(loc, scale, action_agent_idx)
+    @torch.jit.export
+    def loss(self, td: Dict[str, torch.Tensor], agent_idx: int) -> torch.Tensor:
+        td_obs = td["observation"][:, :, :, agent_idx, :][
+            :-1
+        ]  # remove last observation, -> [unroll_length, batch_size, seq_len, obs_dim] : [1, 256, 4, 277]
+        td_obs = td_obs.reshape(
+            [-1] + list(td_obs.shape[-2:])
+        )  # squeeze all dimensions except the last two -> [unroll_length * batch_size, seq_len, obs_dim] (to work with lstm)
+        td_obs = td_obs.swapaxes(0, 1)  # [seq_len, batch_size, obs_dim] : [4, 256, 277]
+        observation_p, observation_v = self._transform_observation(td_obs)
+        # ================= Getting Policy Logits =================
+        policy_logits = self.policy(
+            observation_p
+        )  # [batch_dim, action_dim] : [256, 34]
+        # ================ Getting Baseline =================
+        baseline = self.value(observation_v)  # [seq_len, batch_dim, 1] : [4, 256, 1]
+        baseline = torch.squeeze(baseline, dim=-1)  # [seq_len, batch_dim] : [4, 256]
+        bootstrap_value = baseline[-1]  # [batch_dim] : [256]
+        baseline = baseline[:-1]  # [seq_len - 1, batch_dim] : [3, 256]
+        # ================= Getting Reward, Termination, Action =================
+        reward = td["reward"][:, :, agent_idx] * self.reward_scaling  # [1, 256]
+        termination = td["done"] * (1 - td["truncation"])  # [1, 256]
+        action = td["action"].reshape(
+            td["action"].shape[0],
+            td["action"].shape[1],
+            td["observation"].shape[-2],
+            -1,
+        )  # [1, 256, 2, 17]
+        action_agent_idx = action[:, :, agent_idx, :]  # [1, 256, 17]
+        td_logits = td["logits"].reshape(
+            td["logits"].shape[0],
+            td["logits"].shape[1],
+            td["observation"].shape[-2],
+            -1,
+        )  # [1, 256, 2, 34]
+        td_logit_agent_idx = td_logits[:, :, agent_idx, :]  # [1, 256, 34]
+        loc, scale = self.dist_create(td_logit_agent_idx)  # [1, 256, 17]
+        behaviour_action_log_probs = self.dist_log_prob(
+            loc, scale, action_agent_idx
+        )  # [1, 256]
+        loc, scale = self.dist_create(policy_logits)  # [256, 17]
+        target_action_log_probs = self.dist_log_prob(
+            loc, scale, action_agent_idx
+        )  # [1, 256]
 
         with torch.no_grad():
             vs, advantages = self.compute_gae(
@@ -199,14 +212,19 @@ class AgentLSTM(nn.Module):
                 reward=reward,
                 values=baseline,
                 bootstrap_value=bootstrap_value,
-            )
-        rho_s = torch.exp(target_action_log_probs - behaviour_action_log_probs)
-        surrogate_loss1 = rho_s * advantages
-        surrogate_loss2 = rho_s.clip(1 - self.epsilon, 1 + self.epsilon) * advantages
+            )  # [3, 256]
+
+        rho_s = torch.exp(
+            target_action_log_probs - behaviour_action_log_probs
+        )  # [1, 256]
+        surrogate_loss1 = rho_s * advantages  # [3, 256]
+        surrogate_loss2 = (
+            rho_s.clip(1 - self.epsilon, 1 + self.epsilon) * advantages
+        )  # [3, 256]
         policy_loss = -torch.mean(torch.minimum(surrogate_loss1, surrogate_loss2))
 
         # Value function loss
-        v_error = vs - baseline
+        v_error = vs - baseline  # [3, 256]
         v_loss = torch.mean(v_error * v_error) * 0.5 * 0.5
 
         # Entropy reward
