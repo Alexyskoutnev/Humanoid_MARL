@@ -151,17 +151,6 @@ class AgentLSTM(nn.Module):
         return vs, advantages
 
     @torch.jit.export
-    def _transform_observation(
-        self, observation: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        observation_p = observation  # [seq_len, batch_dim, obs_dim] : [4, 256, 277]
-        observation_p = observation_p.swapaxes(
-            0, 1
-        )  # [batch_dim, seq_len, obs_dim] : [256, 4, 277]
-        observation_v = observation  # [seq_len, batch_dim, obs_dim] : [4, 256, 277]
-        return observation_p, observation_v
-
-    @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int) -> torch.Tensor:
         td_obs = td["observation"][:, :, :, agent_idx, :][
             :-1
@@ -170,13 +159,12 @@ class AgentLSTM(nn.Module):
             [-1] + list(td_obs.shape[-2:])
         )  # squeeze all dimensions except the last two -> [unroll_length * batch_size, seq_len, obs_dim] (to work with lstm)
         td_obs = td_obs.swapaxes(0, 1)  # [seq_len, batch_size, obs_dim] : [4, 256, 277]
-        observation_p, observation_v = self._transform_observation(td_obs)
         # ================= Getting Policy Logits =================
         policy_logits = self.policy(
-            observation_p
+            td_obs.swapaxes(0, 1)
         )  # [batch_dim, action_dim] : [256, 34]
         # ================ Getting Baseline =================
-        baseline = self.value(observation_v)  # [seq_len, batch_dim, 1] : [4, 256, 1]
+        baseline = self.value(td_obs)  # [seq_len, batch_dim, 1] : [4, 256, 1]
         baseline = torch.squeeze(baseline, dim=-1)  # [seq_len, batch_dim] : [4, 256]
         bootstrap_value = baseline[-1]  # [batch_dim] : [256]
         baseline = baseline[:-1]  # [seq_len - 1, batch_dim] : [3, 256]
