@@ -51,7 +51,7 @@ class GymWrapper(gym.Env):
     ):
         self._env = env
         self.get_jax_state = get_jax_state
-        self.num_agents = env.num_humanoids
+        self.num_agents = env.num_agents or 2
         self.metadata = {
             "render.modes": ["human", "rgb_array"],
             "video.frames_per_second": 1 / self._env.dt,
