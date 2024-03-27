@@ -3,7 +3,7 @@
   <option timestep="0.01" iterations="4" />
   <custom>
     <!-- brax custom params -->
-    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 4.10 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 1.10 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
     <numeric data="1000" name="constraint_limit_stiffness"/>
     <numeric data="4000" name="constraint_stiffness"/>
     <numeric data="10" name="constraint_ang_damping"/>
@@ -85,7 +85,7 @@
       </body>
     </body>
 
-    <body name="torso_a_2" pos="1 0 0.75">
+    <body name="torso_a_2" pos="1.1 0 0.75">
       <camera name="track_a_2" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
       <geom name="torso_geom_a_2" pos="0 0 0" size="0.25" type="sphere"/>
       <joint armature="0" damping="0" limited="false" margin="0.01" name="root_a_2" pos="0 0 0" type="free"/>

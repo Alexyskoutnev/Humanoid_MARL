@@ -53,16 +53,13 @@ class Agent(nn.Module):
     def dist_sample_no_postprocess(
         self, loc: torch.Tensor, scale: torch.Tensor
     ) -> torch.Tensor:
-        greater_than_zero_mask = scale > 0
-        not_greater_than_indices = torch.nonzero(
-            ~greater_than_zero_mask, as_tuple=False
-        ).squeeze()
-        if not_greater_than_indices.numel() > 0:
-            print(
-                "Warning: scale <= 0 in dist_sample_no_postprocess : idx = ",
-                not_greater_than_indices,
-            )
-            scale[not_greater_than_indices] = 0.001
+
+        if torch.isnan(
+            scale
+        ).any():  # TODO: Resolve this issue why the Brax simulator is returning NaN values?
+            nan_indices = torch.isnan(scale)
+            # print("Warning: NaN values detected in scale at indices:", nan_indices)
+            scale[nan_indices] = 0.001
         return torch.normal(loc, scale)
 
     @classmethod

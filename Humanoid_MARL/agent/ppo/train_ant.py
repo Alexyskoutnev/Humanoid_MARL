@@ -103,6 +103,17 @@ def sd_map_minibatch(f: Callable[..., torch.Tensor], *sds, **kwargs) -> StepData
     return StepData(**items)
 
 
+def _nan_filter(*arr: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+    _arr_return = []
+    for a in arr[0]:
+        if isinstance(a, torch.Tensor):
+            nan_mask = torch.isnan(a)
+            if torch.any(nan_mask):
+                a = torch.where(nan_mask, torch.tensor(0.0), a)
+        _arr_return.append(a)
+    return tuple(_arr_return)
+
+
 def eval_unroll(
     agents: List[Agent],
     env: Union[VectorGymWrapper, GymWrapper],
@@ -123,13 +134,15 @@ def eval_unroll(
                 Agent.dist_postprocess(action)
             )
         else:
-            observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
+            observation, reward, done, _ = _nan_filter(
+                env.step(Agent.dist_postprocess(action))
+            )
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
     if get_jax_state:
-        return episodes, episode_reward / episodes, jax_state
+        return episodes, episode_reward / (episodes + 1), jax_state
     else:
-        return episodes, episode_reward / episodes
+        return episodes, episode_reward / (episodes + 1)
 
 
 def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int) -> torch.Tensor:

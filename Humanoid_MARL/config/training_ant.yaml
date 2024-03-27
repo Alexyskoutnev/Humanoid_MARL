@@ -8,7 +8,7 @@ num_update_epochs: 8
 discounting: 0.98
 learning_rate: 0.001
 entropy_cost: 0.003
-num_envs: 1024
+num_envs: 2048
 batch_size: 256
 env_name: ants
 device: cuda
