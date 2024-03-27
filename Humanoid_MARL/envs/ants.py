@@ -25,6 +25,7 @@ import jax
 from jax import jit, lax
 from jax import numpy as jp
 import mujoco
+import functools as ft
 
 # from jax import config
 # config.update("jax_disable_jit", True)
@@ -179,8 +180,11 @@ class Ants(PipelineEnv):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
+        self._forward_reward_weight = 1.0
         self.num_agents = 2
         self._dims = None
+        self._or_done_flag = False
+        self._and_done_flag = True
         if exclude_current_positions_from_observation:
             self._q_dim = 13
             self._q_vel_dim = 14
@@ -204,58 +208,132 @@ class Ants(PipelineEnv):
         pipeline_state = self.pipeline_init(q, qd)
         obs = self._get_obs(pipeline_state)
 
-        reward, done, zero = jp.zeros(3)
+        _, done, zero = jp.zeros(3)
+        reward = jp.zeros(2)
+        zero_init = jp.zeros(2)
         metrics = {
-            "reward_forward": zero,
-            "reward_survive": zero,
-            "reward_ctrl": zero,
-            "reward_contact": zero,
-            "x_position": zero,
-            "y_position": zero,
-            "distance_from_origin": zero,
-            "x_velocity": zero,
-            "y_velocity": zero,
-            "forward_reward": zero,
+            "reward_forward": zero_init,
+            "reward_survive": zero_init,
+            "reward_ctrl": zero_init,
+            # "reward_contact": zero_init,
+            "x_position_a_1": zero,
+            "x_position_a_2": zero,
+            "y_position_a_1": zero,
+            "y_position_a_2": zero,
+            # "distance_from_origin_a_1": zero,
+            # "distance_from_origin_a_2": zero,
+            "x_velocity": zero_init,
+            "y_velocity": zero_init,
+            "forward_reward": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
+
+    def _get_forward_reward(
+        self, pipeline_state: base.State, pipeline_state0: base.State
+    ):
+        delta_x = pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
+        delta_y = pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]
+        agent_0_v_norm = jp.sqrt(
+            (delta_x / (self.dt + 0.001)) ** 2 + (delta_y / (self.dt + 0.001)) ** 2
+        )
+        delta_x = pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0]
+        delta_y = pipeline_state.x.pos[9][1] - pipeline_state0.x.pos[9][1]
+        agent_1_v_norm = jp.sqrt(
+            (delta_x / (self.dt + 0.001)) ** 2 + (delta_y / (self.dt + 0.001)) ** 2
+        )
+        return jp.concatenate([agent_0_v_norm.reshape(-1), agent_1_v_norm.reshape(-1)])
+
+    def _control_reward(self, action):
+        action = reshape_vector(
+            action,
+            (self.num_agents, action.shape[0] // self.num_agents),
+        )
+        ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
+        return ctrl_cost
+
+    def _check_is_healthy(self, pipeline_state, min_z, max_z):
+        is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
+        is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy_1)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[9, 2] < min_z, 0.0, 1.0)
+        is_healthy_2 = jp.where(pipeline_state.x.pos[9, 2] > max_z, 0.0, is_healthy_2)
+        is_healthy_1_test = is_healthy_1.astype(jp.int32)
+        is_healthy_2_test = is_healthy_2.astype(jp.int32)
+        done_signals = jp.concatenate(
+            [is_healthy_1_test.reshape(-1), is_healthy_2_test.reshape(-1)]
+        )
+        if self._or_done_flag:
+            env_done = (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        elif self._and_done_flag:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        else:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+
+    def _chase_reward_fn(self, pipeline_state: base.State):
+        pass
 
     def step(self, state: State, action: jax.Array) -> State:
         """Run one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
         assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
-
-        velocity = (pipeline_state.x.pos[0] - pipeline_state0.x.pos[0]) / (
-            self.dt + 0.001
-        )
-        forward_reward = velocity[0]
-
+        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
-        is_healthy = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
-        is_healthy = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy)
+        is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
         if self._terminate_when_unhealthy:
-            healthy_reward = self._healthy_reward
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
+            )
         else:
-            healthy_reward = self._healthy_reward * is_healthy
-        ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action))
-        contact_cost = 0.0
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
+            )
+
+        ctrl_cost = self._control_reward(action)
+        contact_cost = 0.0  # TODO: Implement contact cost
 
         obs = self._get_obs(pipeline_state)
+        reward = forward_reward + healthy_reward - ctrl_cost
+        done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
-        reward = forward_reward + healthy_reward - ctrl_cost - contact_cost
-        done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
+        # state.metrics.update(
+        #     reward_forward=forward_reward,
+        #     reward_survive=healthy_reward,
+        #     reward_ctrl=-ctrl_cost,
+        #     # reward_contact=-contact_cost,
+        #     x_position_a_1=pipeline_state.x.pos[0, 0],
+        #     x_position_a_2=pipeline_state.x.pos[9, 0],
+        #     y_position_a_1=pipeline_state.x.pos[0, 1],
+        #     y_position_a_2=pipeline_state.x.pos[9, 1],
+        #     distance_from_origin_a_1=math.safe_norm(pipeline_state.x.pos[0]),
+        #     distance_from_origin_a_2=math.safe_norm(pipeline_state.x.pos[9]),
+        #     x_velocity=zero_init, # TODO: Implement velocity
+        #     y_velocity=zero_init, # TODO: Implement velocity
+        #     forward_reward=forward_reward,
+        # )
+
+        # =========== MOCK INFO ===========
+        zero_init = jp.zeros(2)  # TODO: Implement velocity
+        zero = jp.zeros(1)
+        # =========== MOCK INFO ===========
         state.metrics.update(
             reward_forward=forward_reward,
             reward_survive=healthy_reward,
             reward_ctrl=-ctrl_cost,
-            reward_contact=-contact_cost,
-            x_position=pipeline_state.x.pos[0, 0],
-            y_position=pipeline_state.x.pos[0, 1],
-            distance_from_origin=math.safe_norm(pipeline_state.x.pos[0]),
-            x_velocity=velocity[0],
-            y_velocity=velocity[1],
+            # reward_contact=-contact_cost,
+            x_position_a_1=pipeline_state.x.pos[0, 0],
+            x_position_a_2=pipeline_state.x.pos[9, 0],
+            y_position_a_1=pipeline_state.x.pos[0, 1],
+            y_position_a_2=pipeline_state.x.pos[9, 1],
+            # distance_from_origin_a_1=zero,
+            # distance_from_origin_a_2=zero,
+            x_velocity=zero_init,  # TODO: Implement velocity
+            y_velocity=zero_init,  # TODO: Implement velocity
             forward_reward=forward_reward,
-        )
+        )  # Mock metrics
         return state.replace(
             pipeline_state=pipeline_state, obs=obs, reward=reward, done=done
         )
@@ -294,3 +372,8 @@ class Ants(PipelineEnv):
     @property
     def action_dim(self):
         return self.dims[-1]
+
+
+@ft.partial(jax.jit, static_argnums=1)
+def reshape_vector(vector, target_shape):
+    return jp.reshape(vector, target_shape)

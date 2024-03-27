@@ -12,7 +12,7 @@ num_envs: 2048
 batch_size: 256
 env_name: ants
 device: cuda
-debug: false
+debug: true
 device_idx: 0
 eval_flag : true
 notebook: false

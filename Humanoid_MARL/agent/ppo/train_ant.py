@@ -162,20 +162,6 @@ def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int) -> torch.Tenso
     )  # Parallized Enviroments [#envs, #num_agents, obs]
 
 
-# def get_obs(
-#     obs: torch.Tensor, dims: Tuple[int], num_agents: int
-# ) -> torch.Tensor:
-#     start_idx = 0
-#     chunks = []
-#     for dim in dims:
-#         chunk_size = dim * num_agents
-#         chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1) # [num_agent, batch_dim, obs_dim]
-#         chunks.append(chunk)
-#         start_idx += chunk_size
-#     breakpoint()
-#     return torch.concatenate(chunks, axis=-1).transpose(0, 1)  # Parallized Enviroments [#envs, #num_agents, obs]
-
-
 def _tranform_observation(
     obs: torch.Tensor, dims: Tuple[int], num_agents: int = 2
 ) -> torch.Tensor:
@@ -607,6 +593,7 @@ def train(
                 get_full_state=full_state,
                 agent_config=agent_config,
             )
+            # breakpoint()
             epoch_loss = 0.0
             td = sd_map(unroll_first, td)
             # update normalization statistics
@@ -616,6 +603,7 @@ def train(
                 env.obs_dims_tuple,
                 get_full_state=full_state,
             )
+            breakpoint()
             for update_epoch in range(num_update_epochs):
                 # shuffle and batch the data
                 total_time = time.time()
@@ -631,6 +619,7 @@ def train(
                         )
                         return data.swapaxes(0, 1)
 
+                    # breakpoint()
                     epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
                 print(f"shuffle time: {time.time() - time_shuffle}")
 
@@ -645,6 +634,7 @@ def train(
                         num_agents=env.num_agents,
                         get_full_state=full_state,
                     )  # -> [3, 256, 2, 277]
+                    # breakpoint()
                     print(f"batch time: {time.time() - time_batch}")
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         time_loss = time.time()
