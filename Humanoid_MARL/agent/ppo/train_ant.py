@@ -446,8 +446,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-    # if not debug:
-    #     agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    if not debug:
+        agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 
@@ -593,7 +593,6 @@ def train(
                 get_full_state=full_state,
                 agent_config=agent_config,
             )
-            # breakpoint()
             epoch_loss = 0.0
             td = sd_map(unroll_first, td)
             # update normalization statistics
@@ -603,11 +602,10 @@ def train(
                 env.obs_dims_tuple,
                 get_full_state=full_state,
             )
-            breakpoint()
             for update_epoch in range(num_update_epochs):
                 # shuffle and batch the data
                 total_time = time.time()
-                print(f"update_epoch {update_epoch}")
+                # print(f"update_epoch {update_epoch}")
                 time_shuffle = time.time()
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
@@ -619,13 +617,12 @@ def train(
                         )
                         return data.swapaxes(0, 1)
 
-                    # breakpoint()
                     epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
-                print(f"shuffle time: {time.time() - time_shuffle}")
+                # print(f"shuffle time: {time.time() - time_shuffle}")
 
                 for minibatch_i in range(num_minibatches):
-                    print(f"minibatch_i {minibatch_i}")
-                    time_batch = time.time()
+                    # print(f"minibatch_i {minibatch_i}")
+                    # time_batch = time.time()
                     td_minibatch = sd_map_minibatch(
                         reshape_minibatch,
                         epoch_td,
@@ -634,10 +631,8 @@ def train(
                         num_agents=env.num_agents,
                         get_full_state=full_state,
                     )  # -> [3, 256, 2, 277]
-                    # breakpoint()
-                    print(f"batch time: {time.time() - time_batch}")
+                    # print(f"batch time: {time.time() - time_batch}")
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
-                        time_loss = time.time()
                         if agent_config.get("freeze_idx") == idx:
                             continue
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
@@ -646,8 +641,8 @@ def train(
                         optimizer.step()
                         total_loss += loss
                         epoch_loss += loss
-                        print(f"loss time: {time.time() - time_loss}")
-                print(f"total time: {time.time() - total_time}")
+                        # print(f"loss time: {time.time() - time_loss}")
+                # print(f"total time: {time.time() - total_time}")
 
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)

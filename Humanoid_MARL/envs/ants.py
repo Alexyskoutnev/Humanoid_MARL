@@ -216,10 +216,10 @@ class Ants(PipelineEnv):
             "reward_survive": zero_init,
             "reward_ctrl": zero_init,
             # "reward_contact": zero_init,
-            "x_position_a_1": zero,
-            "x_position_a_2": zero,
-            "y_position_a_1": zero,
-            "y_position_a_2": zero,
+            "x_position": zero_init,
+            "y_position": zero_init,
+            # "y_position_a_1": zero,
+            # "y_position_a_2": zero,
             # "distance_from_origin_a_1": zero,
             # "distance_from_origin_a_2": zero,
             "x_velocity": zero_init,
@@ -315,21 +315,29 @@ class Ants(PipelineEnv):
         #     forward_reward=forward_reward,
         # )
 
+        x_pos = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 0].reshape(-1),
+                pipeline_state.x.pos[9, 0].reshape(-1),
+            ]
+        )
+        y_pos = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 1].reshape(-1),
+                pipeline_state.x.pos[9, 1].reshape(-1),
+            ]
+        )
+
         # =========== MOCK INFO ===========
         zero_init = jp.zeros(2)  # TODO: Implement velocity
-        zero = jp.zeros(1)
         # =========== MOCK INFO ===========
         state.metrics.update(
             reward_forward=forward_reward,
             reward_survive=healthy_reward,
             reward_ctrl=-ctrl_cost,
+            x_position=x_pos,
+            y_position=y_pos,
             # reward_contact=-contact_cost,
-            x_position_a_1=pipeline_state.x.pos[0, 0],
-            x_position_a_2=pipeline_state.x.pos[9, 0],
-            y_position_a_1=pipeline_state.x.pos[0, 1],
-            y_position_a_2=pipeline_state.x.pos[9, 1],
-            # distance_from_origin_a_1=zero,
-            # distance_from_origin_a_2=zero,
             x_velocity=zero_init,  # TODO: Implement velocity
             y_velocity=zero_init,  # TODO: Implement velocity
             forward_reward=forward_reward,
