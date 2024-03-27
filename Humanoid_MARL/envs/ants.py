@@ -14,6 +14,7 @@
 """Trains an ant to run in the +x direction."""
 from Humanoid_MARL import PACKAGE_ROOT
 import os
+import numpy as np
 
 from brax import base
 from brax import math
@@ -21,8 +22,12 @@ from brax.envs.base import PipelineEnv, State
 from brax.io import mjcf
 from etils import epath
 import jax
+from jax import jit, lax
 from jax import numpy as jp
 import mujoco
+
+# from jax import config
+# config.update("jax_disable_jit", True)
 
 
 class Ants(PipelineEnv):
@@ -147,8 +152,9 @@ class Ants(PipelineEnv):
         terminate_when_unhealthy=True,
         healthy_z_range=(0.2, 1.0),
         contact_force_range=(-1.0, 1.0),
-        reset_noise_scale=0.1,
-        exclude_current_positions_from_observation=True,
+        reset_noise_scale=0.0,
+        # reset_noise_scale=0.1,
+        exclude_current_positions_from_observation=False,
         backend="generalized",
         **kwargs,
     ):
@@ -174,6 +180,13 @@ class Ants(PipelineEnv):
             exclude_current_positions_from_observation
         )
         self.num_agents = 2
+        self._dims = None
+        if exclude_current_positions_from_observation:
+            self._q_dim = 13
+            self._q_vel_dim = 14
+        else:
+            self._q_dim = 15
+            self._q_vel_dim = 14
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -209,9 +222,12 @@ class Ants(PipelineEnv):
     def step(self, state: State, action: jax.Array) -> State:
         """Run one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
+        assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
 
-        velocity = (pipeline_state.x.pos[0] - pipeline_state0.x.pos[0]) / self.dt
+        velocity = (pipeline_state.x.pos[0] - pipeline_state0.x.pos[0]) / (
+            self.dt + 0.001
+        )
         forward_reward = velocity[0]
 
         min_z, max_z = self._healthy_z_range
@@ -225,6 +241,7 @@ class Ants(PipelineEnv):
         contact_cost = 0.0
 
         obs = self._get_obs(pipeline_state)
+
         reward = forward_reward + healthy_reward - ctrl_cost - contact_cost
         done = 1.0 - is_healthy if self._terminate_when_unhealthy else 0.0
         state.metrics.update(
@@ -247,8 +264,33 @@ class Ants(PipelineEnv):
         """Observe ant body position and velocities."""
         qpos = pipeline_state.q
         qvel = pipeline_state.qd
-
         if self._exclude_current_positions_from_observation:
-            qpos = pipeline_state.q[2:]
-
+            indices_to_remove = np.array(
+                [0, 1, 15, 16]
+            )  # Removing CoM x-y for ant 1 and 2
+            qpos = qpos[
+                np.logical_not(np.isin(np.arange(len(qpos)), indices_to_remove))
+            ]
         return jp.concatenate([qpos] + [qvel])
+
+    @property
+    def dims(self):
+        action_dim = int(self.sys.act_size() // self.num_agents)
+        # if self._include_other_agents_state:
+        #     raise NotImplementedError("include_other_agents_state not implemented.")
+        # elif self._full_state_other_agents:
+        #     raise NotImplementedError("full_state_other_agents not implemented.")
+        # else:
+        return (
+            self._q_dim,
+            self._q_vel_dim,
+            action_dim,
+        )
+
+    @property
+    def obs_dims(self):
+        return self.dims[:-1]
+
+    @property
+    def action_dim(self):
+        return self.dims[-1]

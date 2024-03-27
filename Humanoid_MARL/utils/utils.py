@@ -11,9 +11,9 @@ from Humanoid_MARL import *
 def _debug_config(config: Dict) -> Dict:
     update_config = {
         "unroll_length": 2,
-        "num_minibatches": 1,
-        "num_envs": 1,
-        "batch_size": 1,
+        "num_minibatches": 4,
+        "num_envs": 2,
+        "batch_size": 64,
     }
     return config.update(update_config)
 

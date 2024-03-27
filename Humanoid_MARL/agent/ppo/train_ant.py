@@ -116,12 +116,8 @@ def eval_unroll(
     observation = env.reset()
     episodes = torch.zeros((), device=device)
     episode_reward = torch.zeros((), device=device)
-    frames = []
-    num_resets = 1
     for i in range(length):
-        _, action = get_agent_actions(
-            agents, observation, env.obs_dims_tuple, get_full_state, agent_config={}
-        )
+        _, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
         if get_jax_state:
             jax_state, observation, reward, done, _ = env.step(
                 Agent.dist_postprocess(action)
@@ -136,30 +132,35 @@ def eval_unroll(
         return episodes, episode_reward / episodes
 
 
-def get_obs(
-    obs: torch.Tensor, dims: Tuple[int], num_agents: int, get_full_state: bool = False
-) -> torch.Tensor:
-    if get_full_state:
-        return obs
-    if type(dims) == int:  # TODO: FIX THIS, just assume one type of observation for now
-        total_obs = dims
-    else:
-        total_obs = sum(dims)
+def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int) -> torch.Tensor:
     start_idx = 0
-    chunks = []
-    for dim in dims:
+    chunks = [None] * len(dims)
+    for i, dim in enumerate(dims):
         chunk_size = dim * num_agents
         chunk = torch.reshape(
             obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)
-        ).swapaxes(0, 1)
-        chunks.append(chunk)
-        start_idx += chunk_size
-    if len(obs.shape) == 1:
-        return torch.concatenate(chunks, axis=1)  # Assuming only 1 enviroment [obs]
-    elif len(obs.shape) >= 1:
-        return torch.concatenate(chunks, axis=-1).transpose(
+        ).swapaxes(
             0, 1
-        )  # Parallized Enviroments [#envs, #num_agents, obs]
+        )  # [num_agent, batch_dim, obs_dim]
+        chunks[i] = chunk
+        start_idx += chunk_size
+    return torch.cat(chunks, axis=-1).transpose(
+        0, 1
+    )  # Parallized Enviroments [#envs, #num_agents, obs]
+
+
+# def get_obs(
+#     obs: torch.Tensor, dims: Tuple[int], num_agents: int
+# ) -> torch.Tensor:
+#     start_idx = 0
+#     chunks = []
+#     for dim in dims:
+#         chunk_size = dim * num_agents
+#         chunk = torch.reshape(obs[:, start_idx : start_idx + chunk_size], (-1, num_agents, dim)).swapaxes(0, 1) # [num_agent, batch_dim, obs_dim]
+#         chunks.append(chunk)
+#         start_idx += chunk_size
+#     breakpoint()
+#     return torch.concatenate(chunks, axis=-1).transpose(0, 1)  # Parallized Enviroments [#envs, #num_agents, obs]
 
 
 def _tranform_observation(
@@ -201,50 +202,16 @@ def get_agent_actions(
     agents: List[Union[Agent, AgentLSTM]],
     observation: torch.Tensor,
     dims: Tuple[int],
-    get_full_state: bool = False,
-    agent_config: Dict[str, Any] = {},
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Return logits and actions for each agent."""
     num_agents = len(agents)
-    if isinstance(agents[0], Agent) or agents[0].original_name == "Agent":
-        if num_agents == 1:
-            agent = agents[0]
-            if len(observation.shape) == 1:  # Used for single enviroment for evaluation
-                observation = observation.reshape(1, -1)
-            logit, action = agent.get_logits_action(observation)
-            return logit, action
-        elif num_agents > 1:
-            if len(observation.shape) == 1:  # Used for single enviroment for evaluation
-                observation = observation.reshape(1, -1)
-            observation = get_obs(
-                observation, dims, num_agents, get_full_state=get_full_state
-            )  # [#envs, #num_agents, obs]
-            logits, actions = [], []
-            for idx, agent in enumerate(agents):
-                if len(observation.shape) == 2:
-                    logit, action = agent.get_logits_action(observation)
-                else:
-                    logit, action = agent.get_logits_action(observation[:, idx, :])
-                if agent_config.get("freeze_idx") == idx:
-                    action = torch.ones_like(action) * 0.1
-                logits.append(logit)
-                actions.append(action)
-            return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
-    elif isinstance(agents[0], AgentLSTM) or agents[0].original_name == "AgentLSTM":
-        observation = get_obs_time_series(
-            observation, dims
-        )  # [#envs, #time_dim, #num_agents, obs]
-        logits, actions = [], []
-        for idx, agent in enumerate(agents):
-            logit, action = agent.get_logits_action(observation[:, :, idx, :])
-            if agent_config.get("freeze_idx") == idx:
-                action = torch.ones_like(action) * 0.1
-            logits.append(logit)
-            actions.append(action)
-        return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
-    else:
-        raise ValueError(
-            f"Agents must be of type Agent or AgentLSTM, {agents[0]} found."
-        )
+    observation = get_obs(observation, dims, num_agents)
+    logits, actions = [], []
+    for idx, agent in enumerate(agents):
+        logit, action = agent.get_logits_action(observation[:, idx, :])
+        logits.append(logit)
+        actions.append(action)
+    return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
 
 
 def train_unroll(
@@ -263,9 +230,7 @@ def train_unroll(
     for _ in range(num_unrolls):
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
-            logits, action = get_agent_actions(
-                agents, observation, env.obs_dims_tuple, get_full_state, agent_config
-            )
+            logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
             observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
@@ -313,7 +278,7 @@ def update_normalization(
         agent = agents[0]
         agent.update_normalization(observation)
     else:
-        obs = get_obs(observation, dims, num_agents, get_full_state=get_full_state)
+        obs = get_obs(observation, dims, num_agents)
         for idx, agent in enumerate(agents):
             if get_full_state:
                 agent.update_normalization(obs[:])
@@ -349,7 +314,7 @@ def reshape_minibatch(
         -1, epoch_td.shape[3]
     )  # from [minibatch_dim, unroll_length_dim, batch_size, agent_obs_dim] -> [minibatch_dim * unroll_length_dim * batch_size, agent_obs_dim]
     if num_agents > 1:  # convert to two agent observations
-        epoch_td = get_obs(observation, dims, num_agents, get_full_state=get_full_state)
+        epoch_td = get_obs(observation, dims, num_agents)
     epoch_td = epoch_td.reshape(
         *(minibatch_dim, unroll_length_dim, batch_size), num_agents, -1
     )  # [minibatch_dim, unroll_length_dim, batch_dim, num_agent, agent_obs] : [32, 3, 256, 2, 277]
@@ -422,7 +387,6 @@ def setup_env(
         device_idx=device_idx,
         **env_config,
     )
-    breakpoint()
     env = VectorGymWrapper(env, full_state=full_state)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
@@ -483,8 +447,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-    if not debug:
-        agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # if not debug:
+    #     agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 
@@ -530,7 +494,7 @@ def train(
         device=device,
         time_series=time_series,
     )
-    # ========= env warmup (for JIT) =========
+    # ========= env warmup (for JIT) ===========
     obs = env.reset()
     print("Env dims: ", env.obs_dims)
     action = torch.zeros(

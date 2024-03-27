@@ -44,7 +44,6 @@ class Agent(nn.Module):
     @torch.jit.export
     def dist_create(self, logits: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Normal followed by tanh.
-
         torch.distribution doesn't work with torch.jit, so we roll our own."""
         loc, scale = torch.split(logits, logits.shape[-1] // 2, dim=-1)
         scale = F.softplus(scale) + 0.001
@@ -54,6 +53,16 @@ class Agent(nn.Module):
     def dist_sample_no_postprocess(
         self, loc: torch.Tensor, scale: torch.Tensor
     ) -> torch.Tensor:
+        greater_than_zero_mask = scale > 0
+        not_greater_than_indices = torch.nonzero(
+            ~greater_than_zero_mask, as_tuple=False
+        ).squeeze()
+        if not_greater_than_indices.numel() > 0:
+            print(
+                "Warning: scale <= 0 in dist_sample_no_postprocess : idx = ",
+                not_greater_than_indices,
+            )
+            scale[not_greater_than_indices] = 0.001
         return torch.normal(loc, scale)
 
     @classmethod
@@ -104,6 +113,9 @@ class Agent(nn.Module):
         logits = self.policy(observation)
         loc, scale = self.dist_create(logits)
         action = self.dist_sample_no_postprocess(loc, scale)
+        if torch.isnan(action).any():  # If any of the actions are nan, set them to 0
+            nan_indices = torch.isnan(action)
+            action[nan_indices] = 0
         return logits, action
 
     @torch.jit.export

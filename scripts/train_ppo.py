@@ -51,7 +51,10 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
-        elif config["train_config"]["env_name"] == "ants":
+        elif (
+            config["train_config"]["env_name"] == "ants"
+            or config["train_config"]["env_name"] == "ants_debug"
+        ):
             train_ant(
                 **config["train_config"],
                 env_config=config["env_config"],

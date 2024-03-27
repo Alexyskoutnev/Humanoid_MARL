@@ -16,6 +16,7 @@ _envs = {
     "humanoids_wall": humanoids_wall.Humanoid,
     "humanoids_wall_debug": humanoids_wall.Humanoid,
     "ants": ants.Ants,
+    "ants_debug": ants.Ants,
 }
 
 

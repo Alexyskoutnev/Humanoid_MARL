@@ -1,267 +1,165 @@
-<mujoco>
-  <worldbody>
-    <body pos="0 5.13 0.75" quat="-1 0 0 0" gravcomp="0" name="torso_0_a_1">
-      <freejoint name="root_1_a_1" />
-      <geom density="5" type="sphere" size="0.25" pos="0 0 0" quat="-1 0 0 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="torso_geom_2_a_1" />
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_left_leg_3_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.0999999 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_1_geom_7_a_1" />
-        <body pos="0.2 0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_1_8_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_1_15_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1000004 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_leg_geom_16_a1" />
-          <body pos="0.2 0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_0_17_a_1">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_1_27_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 0.1999998 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_ankle_geom_28_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_right_leg_4_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.0999999 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_2_geom_9_a_1" />
-        <body pos="-0.2 0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_2_10_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_2_18_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1000004 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_leg_geom_19_a_1" />
-          <body pos="-0.2 0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_1_20_a_1">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_2_29_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 0.1999998 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_ankle_geom_30_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="back_leg_5_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.0999999 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_3_geom_11_a_1" />
-        <body pos="-0.2 -0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_3_12_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_3_21_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1000004 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="back_leg_geom_22_a_1" />
-          <body pos="-0.2 -0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_2_23_a_1">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_3_31_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 -0.1999998 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="third_ankle_geom_32_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="right_back_leg_6_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.0999999 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_4_geom_13_a_1" />
-        <body pos="0.2 -0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_4_14_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_4_24_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1000004 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="rightback_leg_geom_25_a_1" />
-          <body pos="0.2 -0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_3_26_a_1">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_4_33_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 -0.1999998 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="fourth_ankle_geom_34_a_1" />
-          </body>
-        </body>
-      </body>
-    </body>
-    <body pos="0 0 0.75" quat="-1 0 0 0" gravcomp="0" name="torso_35_a_1">
-      <freejoint name="root_36_a" />
-      <geom density="5" type="sphere" size="0.25" pos="0 0 0" quat="-1 0 0 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="torso_geom_37_a_1" />
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_left_leg_38_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_1_geom_42_a_1" />
-        <body pos="0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_1_43_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_1_50_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_leg_geom_51_a_1" />
-          <body pos="0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_0_52_a_1">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_1_62_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 0.2 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_ankle_geom_63_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_right_leg_39_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_2_geom_44_a_1" />
-        <body pos="-0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_2_45_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_2_53_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_leg_geom_54_a_1" />
-          <body pos="-0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_1_55_a_1">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_2_64_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 0.2 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_ankle_geom_65_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="back_leg_40_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_3_geom_46_a_1" />
-        <body pos="-0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_3_47_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_3_56_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="back_leg_geom_57_a_1" />
-          <body pos="-0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_2_58_a_1">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_3_66_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 -0.2 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="third_ankle_geom_67_a_1" />
-          </body>
-        </body>
-      </body>
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="right_back_leg_41_a_1">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_4_geom_48_a_1" />
-        <body pos="0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_4_49_a_1">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_4_59_a_1" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="rightback_leg_geom_60_a_1" />
-          <body pos="0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_3_61_a_1">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_4_68_a_1" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 -0.2 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="fourth_ankle_geom_69_a_1" />
-          </body>
-        </body>
-      </body>
-    </body>
-
-
-    <body pos="0 5.13 0.75" quat="-1 0 0 0" gravcomp="0" name="torso_2_a_2">
-      <freejoint name="root_1_a_2" />
-      <geom density="5" type="sphere" size="0.25" pos="0 0 0" quat="-1 0 0 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="torso_geom_2_a_2" />
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_left_leg_3_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.0999999 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_1_geom_7_a_2" />
-        <body pos="0.2 0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_1_8_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_1_15_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1000004 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_leg_geom_16_a_2" />
-          <body pos="0.2 0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_0_17_a_2">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_1_27_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 0.1999998 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_ankle_geom_28_a_2" />
-          </body>
-        </body>
-      </body>
-    </body>
-
-
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_right_leg_4_a_2">
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.0999999 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_2_geom_9_a_2" />
-          <body pos="-0.2 0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_2_10_a_2">
-              <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_2_18_a_2" />
-              <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1000004 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_leg_geom_19_a_2" />
-              <body pos="-0.2 0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_1_20_a_2">
-                  <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_2_29_a_2" />
-                  <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 0.1999998 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_ankle_geom_30_a_2" />
-              </body>
-          </body>
-      </body>
-
-
-
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="back_leg_5_a_2">
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.0999999 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_3_geom_11_a_2" />
-          <body pos="-0.2 -0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_3_12_a_2">
-              <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_3_21_a_2" />
-              <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1000004 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="back_leg_geom_22_a_2" />
-              <body pos="-0.2 -0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_2_23_a_2">
-                  <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_3_31_a_2" />
-                  <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 -0.1999998 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="third_ankle_geom_32_a_2" />
-              </body>
-          </body>
-      </body>
-
-
-
-    <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="right_back_leg_6_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.0999999 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_4_geom_13_a_2" />
-        <body pos="0.2 -0.1999998 0" quat="-1 0 0 0" gravcomp="0" name="aux_4_14_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_4_24_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1000004 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="rightback_leg_geom_25_a_2" />
-          <body pos="0.2 -0.2000003 0" quat="-1 0 0 0" gravcomp="0" name="body_3_26_a_2">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_4_33_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 -0.1999998 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="fourth_ankle_geom_34_a_2" />
-          </body>
-        </body>
-      </body>
-    </body>
-
-
-    <body pos="0 0 0.75" quat="-1 0 0 0" gravcomp="0" name="torso_35_a_2">
-      <freejoint name="root_36_a_2" />
-      <geom density="5" type="sphere" size="0.25" pos="0 0 0" quat="-1 0 0 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="torso_geom_37_a_2" />
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_left_leg_38_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_1_geom_42_a_2" />
-        <body pos="0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_1_43_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_1_50_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 0.1 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_leg_geom_51_a_2" />
-          <body pos="0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_0_52_a_2">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_1_62_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 0.2 0" quat="0.7071069 0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="left_ankle_geom_63_a_2" />
-          </body>
-        </body>
-      </body>
-
-
-
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="front_right_leg_39_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_2_geom_44_a_2" />
-        <body pos="-0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_2_45_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_2_53_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 0.1 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_leg_geom_54_a_2" />
-          <body pos="-0.2 0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_1_55_a_2">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_2_64_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 0.2 0" quat="0.7071069 0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="right_ankle_geom_65_a_2" />
-          </body>
-        </body>
-      </body>
-
-
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="back_leg_40_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_3_geom_46_a_2" />
-        <body pos="-0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_3_47_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_3_56_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="-0.1 -0.1 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="back_leg_geom_57_a_2" />
-          <body pos="-0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_2_58_a_2">
-            <joint type="hinge" pos="0 0 0" axis="-0.7071069 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-69.99997 -30.00002" name="ankle_3_66_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="-0.2 -0.2 0" quat="0.7071069 -0.4999999 0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="third_ankle_geom_67_a_2" />
-          </body>
-        </body>
-      </body>
-
-
-      <body pos="0 0 0" quat="-1 0 0 0" gravcomp="0" name="right_back_leg_41_a_2">
-        <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="aux_4_geom_48_a_2" />
-        <body pos="0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="aux_4_49_a_2">
-          <joint type="hinge" pos="0 0 0" axis="-1.192093E-07 0 1" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="-30.00002 30.00002" name="hip_4_59_a_2" />
-          <geom density="5" type="capsule" size="0.08000002 0.141421" pos="0.1 -0.1 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="rightback_leg_geom_60_a_2" />
-          <body pos="0.2 -0.2 0" quat="-1 0 0 0" gravcomp="0" name="body_3_61_a_2">
-            <joint type="hinge" pos="0 0 0" axis="0.7071067 0.7071068 0" ref="0" armature="1" springref="0" springdamper="0 0" damping="1" stiffness="0" solreflimit="0.02 1" solimplimit="0.9 0.95 0.001 0.5 2" solreffriction="0.02 1" solimpfriction="0.9 0.95 0.001 0.5 2" frictionloss="0" limited="true" margin="0" range="30.00002 69.99997" name="ankle_4_68_a_2" />
-            <geom density="5" type="capsule" size="0.08000002 0.2828431" pos="0.2 -0.2 0" quat="0.7071069 -0.4999999 -0.4999999 0" priority="0" contype="1" conaffinity="0" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="fourth_ankle_geom_69_a_2" />
-          </body>
-        </body>
-      </body>
-
-    </body>
-
-    <geom density="5" type="plane" size="40 40 1" pos="0 0 0" quat="-1 0 0 0" priority="0" contype="1" conaffinity="1" group="0" condim="3" solmix="1" solref="0.02 1" solimp="0.9 0.95 0.001" margin="0.01" gap="0" friction="1 0.5 0.5" fluidshape="none" fluidcoef="5 0.25 1.5 1 1" name="floor_70" />
-  </worldbody>
-  <contact />
-  <tendon />
-  <equality />
-  <actuator>
-    <general joint="hip_4_24_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_4_71_a_1" />
-    <general joint="hip_4_24_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_4_71_a_2" />
-    <general joint="hip_4_59_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_4_72_a_1" />
-    <general joint="hip_4_59_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_4_72_a_2" />
-    <general joint="ankle_4_33_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_5_73_a_1" />
-    <general joint="ankle_4_33_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_5_73_a_2" />
-    <general joint="ankle_4_68_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_5_74_a_1" />
-    <general joint="ankle_4_68_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_5_74_a_2" />
-    <general joint="hip_1_15_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_6_75_a_1" />
-    <general joint="hip_1_15_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_6_75_a_2" />
-    <general joint="hip_1_50_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_6_76_a_1" />
-    <general joint="hip_1_50_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_6_76_a_2" />
-    <general joint="ankle_1_27_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_7_77_a_1" />
-    <general joint="ankle_1_27_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_7_77_a_2" />
-    <general joint="ankle_1_62_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_7_78_a_1" />
-    <general joint="ankle_1_62_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_7_78_a_2" />
-    <general joint="hip_2_18_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_8_79_a_1" />
-    <general joint="hip_2_18_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_8_79_a_2" />
-    <general joint="hip_2_53_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_8_80_a_1" />
-    <general joint="hip_2_53_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_8_80_a_2" />
-    <general joint="ankle_2_29_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_9_81_a_1" />
-    <general joint="ankle_2_29_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_9_81_a_2" />
-    <general joint="ankle_2_64_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_9_82_a_1" />
-    <general joint="ankle_2_64_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_9_82_a_2" />
-    <general joint="hip_3_21_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_10_83_a_1" />
-    <general joint="hip_3_21_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_10_83_a_2" />
-    <general joint="hip_3_56_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_10_84_a_1" />
-    <general joint="hip_3_56_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_10_84_a_2" />
-    <general joint="ankle_3_31_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_11_85_a_1" />
-    <general joint="ankle_3_31_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_11_85_a_2" />
-    <general joint="ankle_3_66_a_1" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_11_86_a_1" />
-    <general joint="ankle_3_66_a_2" ctrllimited="false" forcelimited="false" ctrlrange="-1 1" forcerange="0 0" lengthrange="0 0" gear="150 0 0 0 0 0" dyntype="none" gaintype="fixed" biastype="none" dynprm="1 0 0" gainprm="1 0 0" biasprm="0 0 0" name="general_11_86_a_2" />
-  </actuator>
-  <sensor />
-  <compiler coordinate="local" />
-  <option gravity="0 0 -9.81" timestep="0.02" />
-  <option impratio="1" magnetic="0 0 0" wind="0 0 0" density="0" viscosity="0" o_margin="0" o_solref="0.02 1" o_solimp="0.9 0.95 0.001 0.5 2" integrator="RK4" cone="pyramidal" jacobian="auto" solver="Newton" iterations="100" tolerance="1E-08" noslip_iterations="0" noslip_tolerance="1E-06" mpr_iterations="50" mpr_tolerance="1E-06">
-    <flag constraint="enable" equality="enable" frictionloss="enable" limit="enable" contact="enable" passive="enable" gravity="enable" clampctrl="enable" warmstart="enable" filterparent="enable" actuation="enable" refsafe="enable" override="disable" energy="disable" fwdinv="disable" sensornoise="disable" multiccd="disable" />
-  </option>
-  <size memory="-1" />
+<mujoco model="ant">
+  <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
+  <option timestep="0.01" iterations="4" />
   <custom>
-    <numeric name="init_qpos" data="0 0 0.55 1 0 0 0 0 1 0 -1 0 -1 0 1" />
+    <!-- brax custom params -->
+    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 4.10 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+    <numeric data="1000" name="constraint_limit_stiffness"/>
+    <numeric data="4000" name="constraint_stiffness"/>
+    <numeric data="10" name="constraint_ang_damping"/>
+    <numeric data="20" name="constraint_vel_damping"/>
+    <numeric data="0.5" name="joint_scale_pos"/>
+    <numeric data="0.2" name="joint_scale_ang"/>
+    <numeric data="0.0" name="ang_damping"/>
+    <numeric data="1" name="spring_mass_scale"/>
+    <numeric data="1" name="spring_inertia_scale"/>
+    <numeric data="15" name="solver_maxls"/>
   </custom>
-  <asset />
+  <default>
+    <joint armature="1" damping="1" limited="true"/>
+    <geom contype="0" conaffinity="0" condim="3" density="5.0" friction="1 0.5 0.5"
+     rgba="0.4 0.33 0.26 1.0"/>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+    <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+    <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
+    <material name="geom" texture="texgeom" texuniform="true"/>
+  </asset>
+  <worldbody>
+    <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
+    <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="0 0 0" size="40 40 40" type="plane" rgba="0.5 0.5 0.5 1.0"/>
+
+    <body name="torso_a_1" pos="0 0 0.75">
+      <camera name="track_a_1" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
+      <geom name="torso_geom_a_1" pos="0 0 0" size="0.25" type="sphere"/>
+      <joint armature="0" damping="0" limited="false" margin="0.01" name="root_a_1" pos="0 0 0" type="free"/>
+      <body name="front_left_leg_a_1" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="aux_1_geom_a_1" size="0.08" type="capsule"/>
+        <body name="aux_1_a_1" pos="0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_1_a_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="left_leg_geom_a_1" size="0.08" type="capsule"/>
+          <body pos="0.2 0.2 0">
+            <joint axis="-1 1 0" name="ankle_1_a_1" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 0.4 0.0" name="left_ankle_geom_a_1" size="0.08" type="capsule"/>
+            <geom name="left_foot_geom_a_1" contype="1" pos="0.4 0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+      <body name="front_right_leg_a_1" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="aux_2_geom_a_1" size="0.08" type="capsule"/>
+        <body name="aux_2_a_1" pos="-0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_2_a_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="right_leg_geom_a_1" size="0.08" type="capsule"/>
+          <body pos="-0.2 0.2 0">
+            <joint axis="1 1 0" name="ankle_2_a_1" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 0.4 0.0" name="right_ankle_geom_a_1" size="0.08" type="capsule"/>
+            <geom name="right_foot_geom_a_1" contype="1" pos="-0.4 0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+      <body name="back_leg_a_1" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="aux_3_geom_a_1" size="0.08" type="capsule"/>
+        <body name="aux_3_a_1" pos="-0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_3_a_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="back_leg_geom_a_1" size="0.08" type="capsule"/>
+          <body pos="-0.2 -0.2 0">
+            <joint axis="-1 1 0" name="ankle_3_a_1" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 -0.4 0.0" name="third_ankle_geom_a_1" size="0.08" type="capsule"/>
+            <geom name="third_foot_geom_a_1" contype="1" pos="-0.4 -0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+      <body name="right_back_leg_a_1" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="aux_4_geom_a_1" size="0.08" type="capsule"/>
+        <body name="aux_4_a_1" pos="0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_4_a_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="rightback_leg_geom_a_1" size="0.08" type="capsule"/>
+          <body pos="0.2 -0.2 0">
+            <joint axis="1 1 0" name="ankle_4_a_1" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 -0.4 0.0" name="fourth_ankle_geom_a_1" size="0.08" type="capsule"/>
+            <geom name="fourth_foot_geom_a_1" contype="1" pos="0.4 -0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <body name="torso_a_2" pos="1 0 0.75">
+      <camera name="track_a_2" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
+      <geom name="torso_geom_a_2" pos="0 0 0" size="0.25" type="sphere"/>
+      <joint armature="0" damping="0" limited="false" margin="0.01" name="root_a_2" pos="0 0 0" type="free"/>
+
+      <body name="front_left_leg_a_2" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="aux_1_geom_a_2" size="0.08" type="capsule"/>
+        <body name="aux_1_a_2" pos="0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_1_a_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="left_leg_geom_a_2" size="0.08" type="capsule"/>
+          <body pos="0.2 0.2 0">
+            <joint axis="-1 1 0" name="ankle_1_a_2" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 0.4 0.0" name="left_ankle_geom_a_2" size="0.08" type="capsule"/>
+            <geom name="left_foot_geom_a_2" contype="1" pos="0.4 0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="front_right_leg_a_2" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="aux_2_geom_a_2" size="0.08" type="capsule"/>
+        <body name="aux_2_a_2" pos="-0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_2_a_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="right_leg_geom_a_2" size="0.08" type="capsule"/>
+          <body pos="-0.2 0.2 0">
+            <joint axis="1 1 0" name="ankle_2_a_2" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 0.4 0.0" name="right_ankle_geom_a_2" size="0.08" type="capsule"/>
+            <geom name="right_foot_geom_a_2" contype="1" pos="-0.4 0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="back_leg_a_2" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="aux_3_geom_a_2" size="0.08" type="capsule"/>
+        <body name="aux_3_a_2" pos="-0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_3_a_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="back_leg_geom_a_2" size="0.08" type="capsule"/>
+          <body pos="-0.2 -0.2 0">
+            <joint axis="-1 1 0" name="ankle_3_a_2" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 -0.4 0.0" name="third_ankle_geom_a_2" size="0.08" type="capsule"/>
+            <geom name="third_foot_geom_a_2" contype="1" pos="-0.4 -0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+
+      <body name="right_back_leg_a_2" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="aux_4_geom_a_2" size="0.08" type="capsule"/>
+        <body name="aux_4_a_2" pos="0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_4_a_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="rightback_leg_geom_a_2" size="0.08" type="capsule"/>
+          <body pos="0.2 -0.2 0">
+            <joint axis="1 1 0" name="ankle_4_a_2" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 -0.4 0.0" name="fourth_ankle_geom_a_2" size="0.08" type="capsule"/>
+            <geom name="fourth_foot_geom_a_2" contype="1" pos="0.4 -0.4 0" size="0.08" type="sphere" mass="0"/>
+          </body>
+        </body>
+      </body>
+
+    </body>
+  </worldbody>
+  <actuator>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="150"/>
+  </actuator>
 </mujoco>
