@@ -58,11 +58,11 @@ def unroll_first(data):
 
 
 def unroll_first_time_series(data):
-    data = data.swapaxes(2, 3)  # put time right before observation space
+    data = data.swapaxes(1, 2)  # put time right before observation space
     data = data.reshape(
-        tuple(data.shape[:3]) + (-1,)
-    )  # convert from [8, 3, 1024, 4, 554] to [8, 3, 1024, 4 * 554]
-    return unroll_first(data)
+        (-1,) + tuple(data.shape[-2:])
+    )  # convert from [unroll_num, num_envs, seq_len, obs_dim] -> [unroll_num * num_envs * seq_len, obs_dim]
+    return data
 
 
 def sd_map(f: Callable[..., torch.Tensor], *sds) -> StepData:
@@ -230,10 +230,9 @@ def get_agent_actions(
                 actions.append(action)
             return torch.concatenate(logits, axis=1), torch.concatenate(actions, axis=1)
     elif isinstance(agents[0], AgentLSTM) or agents[0].original_name == "AgentLSTM":
-        breakpoint()
-        observation = get_obs(
-            observation, dims, num_agents, get_full_state=get_full_state
-        )
+        observation = get_obs_time_series(
+            observation, dims
+        )  # [#envs, #time_dim, #num_agents, obs]
         logits, actions = [], []
         for idx, agent in enumerate(agents):
             logit, action = agent.get_logits_action(observation[:, :, idx, :])
@@ -260,28 +259,21 @@ def train_unroll(
     agent_config={},
 ):
     """Return step data over multple unrolls."""
-    sd = StepData([], [], [], [], [], [])
+    one_unroll = StepData([observation], [], [], [], [], [])
     for _ in range(num_unrolls):
-        one_unroll = StepData([observation], [], [], [], [], [])
-        for i in range(unroll_length):
-            logits, action = get_agent_actions(
-                agents, observation, env.obs_dims_tuple, get_full_state, agent_config
-            )
-            observation, reward, done, info = env.step(Agent.dist_postprocess(action))
-            one_unroll.observation.append(observation)
-            one_unroll.logits.append(logits)
-            one_unroll.action.append(action)
-            one_unroll.reward.append(reward)
-            one_unroll.done.append(done)
-            one_unroll.truncation.append(info["truncation"])
-            if not debug:
-                logger.log_train(info=info, rewards=reward, num_agents=len(agents))
-        # Apply torch.stack to each field in one_unroll
-        one_unroll = sd_map(torch.stack, one_unroll)
-        # Update the overall StepData structure by concatenating data from the current unroll
-        sd = sd_map(lambda x, y: x + [y], sd, one_unroll)
-    # Apply torch.stack to each field in sd
-    td = sd_map(torch.stack, sd)
+        logits, action = get_agent_actions(
+            agents, observation, env.obs_dims_tuple, get_full_state, agent_config
+        )
+        observation, reward, done, info = env.step(Agent.dist_postprocess(action))
+        one_unroll.observation.append(observation)
+        one_unroll.logits.append(logits)
+        one_unroll.action.append(action)
+        one_unroll.reward.append(reward)
+        one_unroll.done.append(done)
+        one_unroll.truncation.append(info["truncation"])
+        if not debug:
+            logger.log_train(info=info, rewards=reward, num_agents=len(agents))
+    td = sd_map(torch.stack, one_unroll)
     return observation, td
 
 
@@ -381,6 +373,7 @@ def reshape_minibatch_time_series(
     Returns:
         torch.Tensor: Reshaped tensor representing the time-series data.
     """
+    breakpoint()
     minibatch_dim, unroll_length_dim, batch_size = (
         epoch_td.shape[0],
         epoch_td.shape[1],
@@ -413,6 +406,7 @@ def setup_env(
     env_config: Dict,
     full_state: bool,
     device="cuda",
+    time_series: bool = True,
 ) -> Env:
     env = envs.create(
         env_name,
@@ -424,6 +418,10 @@ def setup_env(
     env = VectorGymWrapper(env, full_state=full_state)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
+    if time_series:
+        env = HistoryBuffer(
+            env, obs_size=env.obs_dims * 2, num_envs=num_envs, device=device
+        )
     return env
 
 
@@ -451,10 +449,8 @@ def setup_agents(
     }
 
     def create_agent() -> Union[Agent, AgentLSTM]:
-        if network_config.get("LSTM"):
-            return AgentLSTM(**network_arch).to(device)
-        else:
-            return Agent(**network_arch).to(device)
+        AgentLSTM(**network_arch).to(device)
+        return AgentLSTM(**network_arch)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_name = f"{timestamp}_ppo_{env_name}.pt"
@@ -523,6 +519,7 @@ def train(
         env_config,
         full_state,
         device=device,
+        time_series=time_series,
     )
     # ========= env warmup (for JIT) =========
     obs = env.reset()
@@ -553,7 +550,52 @@ def train(
     )
     # ========= create the agent =============
     for eval_i in range(eval_frequency + 1):
+        if eval_flag:
+            t = time.time()
+            with torch.no_grad():
+                episode_count, episode_reward = eval_unroll(
+                    agents,
+                    env,
+                    episode_length,
+                    device,
+                    get_full_state=full_state,
+                    agent_config=agent_config,
+                )
+            duration = time.time() - t
+            episode_avg_length = env.num_envs * episode_length / episode_count
+            eval_sps = env.num_envs * episode_length / duration
+            running_mean.append(episode_reward.cpu().item())
+            progress = {
+                "eval/episode_reward": episode_reward,
+                "eval/completed_episodes": episode_count,
+                "eval/avg_episode_length": episode_avg_length,
+                "speed/sps": sps,
+                "speed/eval_sps": eval_sps,
+                "losses/total_loss": total_loss,
+                "eval/episode_reward_mean": np.mean(running_mean[runnning_avg_length:]),
+            }
+            if not debug:
+                logger.log_eval(
+                    episode_reward=episode_reward.cpu().item(),
+                    sps=sps,
+                    eval_sps=eval_sps,
+                    total_loss=total_loss,
+                    running_mean_reward=np.mean(running_mean[runnning_avg_length:]),
+                )
+                if progress_fn:
+                    progress_fn(total_steps, progress)
+            # Save model functionality
+            try:
+                save_models(
+                    agents, network_arch, model_name=model_name, notebook=notebook
+                )
+            except:
+                print("Failed to save model")
+            if np.mean(running_mean[2:]) >= eval_reward_limit:
+                break
 
+        if eval_i == eval_frequency:
+            break
         observation = env.reset()
         num_steps = batch_size * num_minibatches * unroll_length
         num_epochs = num_timesteps // (num_steps * eval_frequency)
@@ -578,12 +620,73 @@ def train(
                 logger=logger,
                 get_full_state=full_state,
                 agent_config=agent_config,
-            )
+            )  # torch.Size([8, 4, 1024, 554]) -> [unroll_amount, seq_lenth, batch_dim, obs_dim]
             epoch_loss = 0.0
-            # if time_series:
-            #     td = sd_map_alt(unroll_first, unroll_first_time_series, td)
+            td = sd_map_alt(
+                unroll_first, unroll_first_time_series, td
+            )  # obs -> [unroll_length * batch_dim, seq_len, obs_dim]
+            for update_epoch in range(num_update_epochs):
+                # shuffle and batch the data
+                total_time = time.time()
+                print(f"update_epoch {update_epoch}")
+                time_shuffle = time.time()
+                with torch.no_grad():
+                    permutation = torch.randperm(td.observation.shape[0], device=device)
+
+                    def shuffle_batch(data):
+                        breakpoint()
+                        data = data[permutation, :]
+                        data = data.reshape(
+                            [num_minibatches, -1] + list(data.shape[-2:])
+                        )
+                        return data
+
+                    # td -> obs : [unroll_length, batch_dim, seq_len * obs_dim]
+                    breakpoint()
+                    epoch_td = sd_map(
+                        shuffle_batch, td
+                    )  # -> epoch_td -> [mini_batch, unroll_length, batch_dim, seq_len * obs_dim]
+                breakpoint()
+                print(f"shuffle time: {time.time() - time_shuffle}")
+                for minibatch_i in range(num_minibatches):
+                    print(f"minibatch_i {minibatch_i}")
+                    time_batch = time.time()
+                    breakpoint()
+                    td_minibatch = sd_map_minibatch(  # obs ->
+                        reshape_minibatch_time_series,
+                        epoch_td,
+                        minibatch_idx=minibatch_i,
+                        dims=env.obs_dims_tuple,
+                        num_agents=env.num_agents,
+                    )
+                    breakpoint()
+                    print(f"batch time: {time.time() - time_batch}")
+                    for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
+                        time_loss = time.time()
+                        if agent_config.get("freeze_idx") == idx:
+                            continue
+                        loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
+                        total_loss += loss
+                        epoch_loss += loss
+                        print(f"loss time: {time.time() - time_loss}")
+                print(f"total time: {time.time() - total_time}")
+            # else:
+            #     td = sd_map(unroll_first, td)
+            #     # update normalization statistics
+            #     update_normalization(
+            #         agents,
+            #         td.observation,
+            #         env.obs_dims_tuple,
+            #         get_full_state=full_state,
+            #     )
             #     for update_epoch in range(num_update_epochs):
             #         # shuffle and batch the data
+            #         total_time = time.time()
+            #         print(f"update_epoch {update_epoch}")
+            #         time_shuffle = time.time()
             #         with torch.no_grad():
             #             permutation = torch.randperm(
             #                 td.observation.shape[1], device=device
@@ -597,18 +700,25 @@ def train(
             #                 )
             #                 return data.swapaxes(0, 1)
 
-            #             epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 2216]
+            #             epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
+            #         print(f"shuffle time: {time.time() - time_shuffle}")
+
             #         for minibatch_i in range(num_minibatches):
+            #             print(f"minibatch_i {minibatch_i}")
+            #             time_batch = time.time()
             #             td_minibatch = sd_map_minibatch(
-            #                 reshape_minibatch_time_series,
+            #                 reshape_minibatch,
             #                 epoch_td,
             #                 minibatch_idx=minibatch_i,
             #                 dims=env.obs_dims_tuple,
             #                 num_agents=env.num_agents,
-            #             )
+            #                 get_full_state=full_state,
+            #             )  # -> [3, 256, 2, 277]
+            #             print(f"batch time: {time.time() - time_batch}")
             #             for idx, (agent, optimizer) in enumerate(
             #                 zip(agents, optimizers)
             #             ):
+            #                 time_loss = time.time()
             #                 if agent_config.get("freeze_idx") == idx:
             #                     continue
             #                 loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
@@ -617,49 +727,8 @@ def train(
             #                 optimizer.step()
             #                 total_loss += loss
             #                 epoch_loss += loss
-            # else:
-            breakpoint()
-            td = sd_map(unroll_first, td)
-            # update normalization statistics
-            update_normalization(
-                agents,
-                td.observation,
-                env.obs_dims_tuple,
-                get_full_state=full_state,
-            )
-            breakpoint()
-            for update_epoch in range(num_update_epochs):
-                # shuffle and batch the data
-                with torch.no_grad():
-                    permutation = torch.randperm(td.observation.shape[1], device=device)
-
-                    def shuffle_batch(data):
-                        data = data[:, permutation]
-                        data = data.reshape(
-                            [data.shape[0], num_minibatches, -1] + list(data.shape[2:])
-                        )
-                        return data.swapaxes(0, 1)
-
-                    epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
-
-                for minibatch_i in range(num_minibatches):
-                    td_minibatch = sd_map_minibatch(
-                        reshape_minibatch,
-                        epoch_td,
-                        minibatch_idx=minibatch_i,
-                        dims=env.obs_dims_tuple,
-                        num_agents=env.num_agents,
-                        get_full_state=full_state,
-                    )  # -> [3, 256, 2, 277]
-                    for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
-                        if agent_config.get("freeze_idx") == idx:
-                            continue
-                        loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
-                        total_loss += loss
-                        epoch_loss += loss
+            #                 print(f"loss time: {time.time() - time_loss}")
+            #         print(f"total time: {time.time() - total_time}")
 
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)

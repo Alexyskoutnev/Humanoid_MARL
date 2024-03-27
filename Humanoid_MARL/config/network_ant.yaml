@@ -1,0 +1,10 @@
+MLP : true
+LSTM : false
+TRANSFORMER : false
+
+POLICY_LAYERS : [277, 64, 64, 34] # fix this with ant obs + action dim
+VALUE_LAYERS : [277, 64, 64, 1]
+
+
+HIDDEN_SIZE : 64
+NUM_LAYERS : 1

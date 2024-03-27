@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# pylint:disable=g-multiple-import
 """Trains an ant to run in the +x direction."""
+from Humanoid_MARL import PACKAGE_ROOT
+import os
 
 from brax import base
 from brax import math
@@ -25,8 +25,7 @@ from jax import numpy as jp
 import mujoco
 
 
-class Ant(PipelineEnv):
-    # pyformat: disable
+class Ants(PipelineEnv):
     """
     ### Description
 
@@ -138,7 +137,6 @@ class Ant(PipelineEnv):
     2. The y-orientation (index 2) in the state is **not** in the range
        `[0.2, 1.0]`
     """
-    # pyformat: enable
 
     def __init__(
         self,
@@ -154,32 +152,11 @@ class Ant(PipelineEnv):
         backend="generalized",
         **kwargs,
     ):
-        path = epath.resource_path("brax") / "envs/assets/ant.xml"
-        sys = mjcf.load(path)
+
+        ant_path = os.path.join(PACKAGE_ROOT, "assets", "ants_2.xml")
+        sys = mjcf.load(ant_path)
 
         n_frames = 5
-
-        if backend in ["spring", "positional"]:
-            sys = sys.replace(dt=0.005)
-            n_frames = 10
-
-        if backend == "mjx":
-            sys = sys.tree_replace(
-                {
-                    "opt.solver": mujoco.mjtSolver.mjSOL_NEWTON,
-                    "opt.disableflags": mujoco.mjtDisableBit.mjDSBL_EULERDAMP,
-                    "opt.iterations": 1,
-                    "opt.ls_iterations": 4,
-                }
-            )
-
-        if backend == "positional":
-            # TODO: does the same actuator strength work as in spring
-            sys = sys.replace(
-                actuator=sys.actuator.replace(
-                    gear=200 * jp.ones_like(sys.actuator.gear)
-                )
-            )
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
 
@@ -196,7 +173,7 @@ class Ant(PipelineEnv):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
-        self.num_agents = 1
+        self.num_agents = 2
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")

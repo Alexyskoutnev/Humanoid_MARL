@@ -1,0 +1,22 @@
+num_timesteps: 5000000
+eval_reward_limit: 30000
+eval_frequency: 1000
+episode_length: 1000
+unroll_length: 1
+num_minibatches: 32
+num_update_epochs: 8
+discounting: 0.98
+learning_rate: 0.001
+entropy_cost: 0.003
+num_envs: 1024
+batch_size: 256
+env_name: ants
+device: cuda
+debug: false
+device_idx: 0
+eval_flag : true
+notebook: false
+model_path : null
+runnning_avg_length : 3
+full_state : false
+time_series : true

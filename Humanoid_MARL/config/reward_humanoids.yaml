@@ -2,7 +2,7 @@ terminate_when_unhealthy: true
 include_standing_up_flag: true
 chase_reward: true
 exclude_current_positions_from_observation: true
-forward_reward_weight: 1.0
+forward_reward_weight: 0.0
 ctrl_cost_weight: 0.1
 healthy_reward: 1.0
 healthy_z_range:

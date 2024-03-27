@@ -422,6 +422,7 @@ def setup_env(
         device_idx=device_idx,
         **env_config,
     )
+    breakpoint()
     env = VectorGymWrapper(env, full_state=full_state)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
@@ -488,7 +489,7 @@ def setup_agents(
 
 
 def train(
-    env_name: str = "humanoids",
+    env_name: str = "ants",
     num_envs: Union[int, None] = 2048,
     episode_length: int = 1000,
     device: str = "cuda",
@@ -630,115 +631,56 @@ def train(
                 agent_config=agent_config,
             )
             epoch_loss = 0.0
-            if time_series:
+            td = sd_map(unroll_first, td)
+            # update normalization statistics
+            update_normalization(
+                agents,
+                td.observation,
+                env.obs_dims_tuple,
+                get_full_state=full_state,
+            )
+            for update_epoch in range(num_update_epochs):
+                # shuffle and batch the data
+                total_time = time.time()
+                print(f"update_epoch {update_epoch}")
+                time_shuffle = time.time()
+                with torch.no_grad():
+                    permutation = torch.randperm(td.observation.shape[1], device=device)
 
-                td = sd_map_alt(unroll_first, unroll_first_time_series, td)
-                for update_epoch in range(num_update_epochs):
-                    # shuffle and batch the data
-                    total_time = time.time()
-                    print(f"update_epoch {update_epoch}")
-                    time_shuffle = time.time()
-                    with torch.no_grad():
-                        permutation = torch.randperm(
-                            td.observation.shape[1], device=device
+                    def shuffle_batch(data):
+                        data = data[:, permutation]
+                        data = data.reshape(
+                            [data.shape[0], num_minibatches, -1] + list(data.shape[2:])
                         )
+                        return data.swapaxes(0, 1)
 
-                        def shuffle_batch(data):
-                            data = data[:, permutation]
-                            data = data.reshape(
-                                [data.shape[0], num_minibatches, -1]
-                                + list(data.shape[2:])
-                            )
-                            return data.swapaxes(0, 1)
+                    epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
+                print(f"shuffle time: {time.time() - time_shuffle}")
 
-                        # td -> obs : [unroll_length, batch_dim, seq_len * obs_dim]
-                        epoch_td = sd_map(
-                            shuffle_batch, td
-                        )  # -> epoch_td -> [mini_batch, unroll_length, batch_dim, seq_len * obs_dim]
-                    print(f"shuffle time: {time.time() - time_shuffle}")
-                    for minibatch_i in range(num_minibatches):
-                        print(f"minibatch_i {minibatch_i}")
-                        time_batch = time.time()
-                        breakpoint()
-                        td_minibatch = sd_map_minibatch(  # obs ->
-                            reshape_minibatch_time_series,
-                            epoch_td,
-                            minibatch_idx=minibatch_i,
-                            dims=env.obs_dims_tuple,
-                            num_agents=env.num_agents,
-                        )
-                        breakpoint()
-                        print(f"batch time: {time.time() - time_batch}")
-                        for idx, (agent, optimizer) in enumerate(
-                            zip(agents, optimizers)
-                        ):
-                            time_loss = time.time()
-                            if agent_config.get("freeze_idx") == idx:
-                                continue
-                            loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                            optimizer.zero_grad()
-                            loss.backward()
-                            optimizer.step()
-                            total_loss += loss
-                            epoch_loss += loss
-                            print(f"loss time: {time.time() - time_loss}")
-                    print(f"total time: {time.time() - total_time}")
-            else:
-                td = sd_map(unroll_first, td)
-                # update normalization statistics
-                update_normalization(
-                    agents,
-                    td.observation,
-                    env.obs_dims_tuple,
-                    get_full_state=full_state,
-                )
-                for update_epoch in range(num_update_epochs):
-                    # shuffle and batch the data
-                    total_time = time.time()
-                    print(f"update_epoch {update_epoch}")
-                    time_shuffle = time.time()
-                    with torch.no_grad():
-                        permutation = torch.randperm(
-                            td.observation.shape[1], device=device
-                        )
-
-                        def shuffle_batch(data):
-                            data = data[:, permutation]
-                            data = data.reshape(
-                                [data.shape[0], num_minibatches, -1]
-                                + list(data.shape[2:])
-                            )
-                            return data.swapaxes(0, 1)
-
-                        epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
-                    print(f"shuffle time: {time.time() - time_shuffle}")
-
-                    for minibatch_i in range(num_minibatches):
-                        print(f"minibatch_i {minibatch_i}")
-                        time_batch = time.time()
-                        td_minibatch = sd_map_minibatch(
-                            reshape_minibatch,
-                            epoch_td,
-                            minibatch_idx=minibatch_i,
-                            dims=env.obs_dims_tuple,
-                            num_agents=env.num_agents,
-                            get_full_state=full_state,
-                        )  # -> [3, 256, 2, 277]
-                        print(f"batch time: {time.time() - time_batch}")
-                        for idx, (agent, optimizer) in enumerate(
-                            zip(agents, optimizers)
-                        ):
-                            time_loss = time.time()
-                            if agent_config.get("freeze_idx") == idx:
-                                continue
-                            loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
-                            optimizer.zero_grad()
-                            loss.backward()
-                            optimizer.step()
-                            total_loss += loss
-                            epoch_loss += loss
-                            print(f"loss time: {time.time() - time_loss}")
-                    print(f"total time: {time.time() - total_time}")
+                for minibatch_i in range(num_minibatches):
+                    print(f"minibatch_i {minibatch_i}")
+                    time_batch = time.time()
+                    td_minibatch = sd_map_minibatch(
+                        reshape_minibatch,
+                        epoch_td,
+                        minibatch_idx=minibatch_i,
+                        dims=env.obs_dims_tuple,
+                        num_agents=env.num_agents,
+                        get_full_state=full_state,
+                    )  # -> [3, 256, 2, 277]
+                    print(f"batch time: {time.time() - time_batch}")
+                    for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
+                        time_loss = time.time()
+                        if agent_config.get("freeze_idx") == idx:
+                            continue
+                        loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
+                        total_loss += loss
+                        epoch_loss += loss
+                        print(f"loss time: {time.time() - time_loss}")
+                print(f"total time: {time.time() - total_time}")
 
             if not debug:
                 logger.log_epoch_loss(epoch_loss / num_epoch + 1)
