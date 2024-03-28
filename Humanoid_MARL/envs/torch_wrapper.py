@@ -20,7 +20,7 @@ from typing import Optional
 
 # NOTE: The following line will emit a warning and raise ImportError if `torch`
 # isn't available.
-from brax.io import torch
+from brax.io import torch as brax_torch
 import gym
 import numpy as np
 import torch
@@ -42,18 +42,18 @@ class TorchWrapper(gym.Wrapper):
 
     def reset(self):
         obs = super().reset()
-        return torch.jax_to_torch(obs, device=self.device)
+        return brax_torch.jax_to_torch(obs, device=self.device)
 
     def step(self, action):
-        action = torch.torch_to_jax(action)
+        action = brax_torch.torch_to_jax(action)
         if self.get_jax_state:
             jax_state, obs, reward, done, info = super().step(action)
         else:
             obs, reward, done, info = super().step(action)
-        obs = torch.jax_to_torch(obs, device=self.device)
-        reward = torch.jax_to_torch(reward, device=self.device)
-        done = torch.jax_to_torch(done, device=self.device)
-        info = torch.jax_to_torch(info, device=self.device)
+        obs = brax_torch.jax_to_torch(obs, device=self.device)
+        reward = brax_torch.jax_to_torch(reward, device=self.device)
+        done = brax_torch.jax_to_torch(done, device=self.device)
+        info = brax_torch.jax_to_torch(info, device=self.device)
         if not self.get_jax_state:
             return obs, reward, done, info
         elif self.get_jax_state:
