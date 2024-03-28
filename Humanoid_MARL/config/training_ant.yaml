@@ -16,7 +16,8 @@ debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-model_path : "models/20240327_165612_ppo_ants.pt"
+# model_path : "models/20240327_165612_ppo_ants.pt"
+model_path : null
 runnning_avg_length : 3
 full_state : false
 time_series : false

@@ -146,6 +146,7 @@ def eval_unroll(
 
 
 def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int) -> torch.Tensor:
+    # assert obs.shape == 2 #we are assuming that the input has shape [batch_dim, obs_dim]
     start_idx = 0
     chunks = [None] * len(dims)
     for i, dim in enumerate(dims):
@@ -265,24 +266,40 @@ def update_normalization_time_series(
             agent.update_normalization(obs[:, :, idx, :])
 
 
+# def update_normalization(
+#     agents: List[Agent],
+#     observation: torch.Tensor,
+#     dims: Tuple[int],
+#     get_full_state: bool = False,
+# ) -> None:
+#     num_agents = len(agents)
+#     observation = observation.view(observation.shape[0] * observation.shape[1], -1)
+#     if num_agents == 1:
+#         agent = agents[0]
+#         agent.update_normalization(observation)
+#     else:
+#         obs = get_obs(observation, dims, num_agents)
+#         breakpoint()
+#         for idx, agent in enumerate(agents):
+#             if get_full_state:
+#                 agent.update_normalization(obs[:])
+#             else:
+#                 agent.update_normalization(obs[:, idx, :])
+
+
 def update_normalization(
     agents: List[Agent],
     observation: torch.Tensor,
     dims: Tuple[int],
-    get_full_state: bool = False,
 ) -> None:
     num_agents = len(agents)
-    observation = observation.view(observation.shape[0] * observation.shape[1], -1)
-    if num_agents == 1:
-        agent = agents[0]
-        agent.update_normalization(observation)
-    else:
-        obs = get_obs(observation, dims, num_agents)
-        for idx, agent in enumerate(agents):
-            if get_full_state:
-                agent.update_normalization(obs[:])
-            else:
-                agent.update_normalization(obs[:, idx, :])
+    roll_len_dim = []
+    for obs in observation:
+        _obs = get_obs(obs, dims, num_agents)
+        roll_len_dim.append(_obs)
+    _observation = torch.stack(roll_len_dim)
+    for idx, agent in enumerate(agents):
+        agent.update_normalization(_observation[:, :, idx, :])
 
 
 def reshape_minibatch(
@@ -344,7 +361,6 @@ def reshape_minibatch_time_series(
     Returns:
         torch.Tensor: Reshaped tensor representing the time-series data.
     """
-    breakpoint()
     minibatch_dim, unroll_length_dim, batch_size = (
         epoch_td.shape[0],
         epoch_td.shape[1],
@@ -593,20 +609,18 @@ def train(
                 get_full_state=full_state,
                 agent_config=agent_config,
             )
-            epoch_loss = 0.0
+
             td = sd_map(unroll_first, td)
             # update normalization statistics
-            update_normalization(
-                agents,
-                td.observation,
-                env.obs_dims_tuple,
-                get_full_state=full_state,
-            )
+            # update_normalization(
+            #     agents,
+            #     td.observation,
+            #     env.obs_dims_tuple,
+            # )
             for update_epoch in range(num_update_epochs):
+                epoch_loss = 0.0
                 # shuffle and batch the data
-                total_time = time.time()
                 # print(f"update_epoch {update_epoch}")
-                time_shuffle = time.time()
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
 
@@ -644,9 +658,9 @@ def train(
                         # print(f"loss time: {time.time() - time_loss}")
                 # print(f"total time: {time.time() - total_time}")
 
-            if not debug:
-                logger.log_epoch_loss(epoch_loss / num_epoch + 1)
-            print(f"epoch {num_epoch} : [{epoch_loss}]")
+                if not debug:
+                    logger.log_epoch_loss(epoch_loss / num_epoch + 1)
+                    print(f"epoch {num_epoch} : [{epoch_loss}]")
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps

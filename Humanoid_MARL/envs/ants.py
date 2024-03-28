@@ -28,6 +28,7 @@ import mujoco
 import functools as ft
 
 # from jax import config
+
 # config.update("jax_disable_jit", True)
 
 
@@ -153,9 +154,8 @@ class Ants(PipelineEnv):
         terminate_when_unhealthy=True,
         healthy_z_range=(0.2, 1.0),
         contact_force_range=(-1.0, 1.0),
-        reset_noise_scale=0.0,
-        # reset_noise_scale=0.1,
-        exclude_current_positions_from_observation=False,
+        reset_noise_scale=0.1,
+        exclude_current_positions_from_observation=True,
         backend="generalized",
         **kwargs,
     ):
@@ -183,8 +183,8 @@ class Ants(PipelineEnv):
         self._forward_reward_weight = 1.0
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = False
-        self._and_done_flag = True
+        self._or_done_flag = True
+        self._and_done_flag = False
         if exclude_current_positions_from_observation:
             self._q_dim = 13
             self._q_vel_dim = 14
@@ -215,11 +215,8 @@ class Ants(PipelineEnv):
             "reward_forward": zero_init,
             "reward_survive": zero_init,
             "reward_ctrl": zero_init,
-            # "reward_contact": zero_init,
             "x_position": zero_init,
             "y_position": zero_init,
-            # "y_position_a_1": zero,
-            # "y_position_a_2": zero,
             # "distance_from_origin_a_1": zero,
             # "distance_from_origin_a_2": zero,
             "x_velocity": zero_init,
@@ -242,6 +239,17 @@ class Ants(PipelineEnv):
             (delta_x / (self.dt + 0.001)) ** 2 + (delta_y / (self.dt + 0.001)) ** 2
         )
         return jp.concatenate([agent_0_v_norm.reshape(-1), agent_1_v_norm.reshape(-1)])
+
+    def _get_forward_reward_x(
+        self, pipeline_state: base.State, pipeline_state0: base.State
+    ):
+        delta_x_a_1 = (pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]) / (
+            self.dt + 0.001
+        )
+        delta_x_a_2 = pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0] / (
+            self.dt + 0.001
+        )
+        return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _control_reward(self, action):
         action = reshape_vector(
@@ -279,7 +287,8 @@ class Ants(PipelineEnv):
         pipeline_state0 = state.pipeline_state
         assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
-        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
@@ -298,22 +307,6 @@ class Ants(PipelineEnv):
         obs = self._get_obs(pipeline_state)
         reward = forward_reward + healthy_reward - ctrl_cost
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
-
-        # state.metrics.update(
-        #     reward_forward=forward_reward,
-        #     reward_survive=healthy_reward,
-        #     reward_ctrl=-ctrl_cost,
-        #     # reward_contact=-contact_cost,
-        #     x_position_a_1=pipeline_state.x.pos[0, 0],
-        #     x_position_a_2=pipeline_state.x.pos[9, 0],
-        #     y_position_a_1=pipeline_state.x.pos[0, 1],
-        #     y_position_a_2=pipeline_state.x.pos[9, 1],
-        #     distance_from_origin_a_1=math.safe_norm(pipeline_state.x.pos[0]),
-        #     distance_from_origin_a_2=math.safe_norm(pipeline_state.x.pos[9]),
-        #     x_velocity=zero_init, # TODO: Implement velocity
-        #     y_velocity=zero_init, # TODO: Implement velocity
-        #     forward_reward=forward_reward,
-        # )
 
         x_pos = jp.concatenate(
             [
