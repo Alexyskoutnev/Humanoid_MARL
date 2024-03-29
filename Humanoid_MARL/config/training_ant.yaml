@@ -6,7 +6,7 @@ unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 4
 discounting: 0.97
-learning_rate: 0.0001
+learning_rate: 0.0003
 entropy_cost: 0.02
 num_envs: 2048
 batch_size: 1024
@@ -16,8 +16,8 @@ debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-model_path : null
-# model_path : "models/20240329_150029_ppo_ants.pt"
+# model_path : null
+model_path : "models/20240329_153417_ppo_ants.pt"
 runnning_avg_length : 3
 full_state : false
 time_series : false
