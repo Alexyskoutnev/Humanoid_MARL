@@ -28,7 +28,6 @@ import mujoco
 import functools as ft
 
 # from jax import config
-
 # config.update("jax_disable_jit", True)
 
 
@@ -156,7 +155,7 @@ class Ants(PipelineEnv):
         contact_force_range=(-1.0, 1.0),
         reset_noise_scale=0.1,
         exclude_current_positions_from_observation=True,
-        backend="generalized",
+        backend="positional",
         **kwargs,
     ):
 
@@ -164,6 +163,10 @@ class Ants(PipelineEnv):
         sys = mjcf.load(ant_path)
 
         n_frames = 5
+
+        if backend in ["spring", "positional"]:
+            sys = sys.replace(dt=0.005)
+            n_frames = 10
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
 
@@ -183,8 +186,8 @@ class Ants(PipelineEnv):
         self._forward_reward_weight = 1.0
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = True
-        self._and_done_flag = False
+        self._or_done_flag = False
+        self._and_done_flag = True
         if exclude_current_positions_from_observation:
             self._q_dim = 13
             self._q_vel_dim = 14
@@ -303,8 +306,9 @@ class Ants(PipelineEnv):
         # # nan_indices_qd = jp.where(jp.isnan(pipeline_state0.qd))
         # if jp.isnan(pipeline_state0.qd).any():
         #     print("Indices of NaN values in qd:", jp.isnan(pipeline_state0.qd))
-        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
-        # velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
+        # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+
+        velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
