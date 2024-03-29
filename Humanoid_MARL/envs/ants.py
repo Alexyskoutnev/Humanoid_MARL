@@ -157,6 +157,7 @@ class Ants(PipelineEnv):
         exclude_current_positions_from_observation=True,
         forward_reward_weight=1.0,
         chase_reward_weight=1.0,
+        tag_reward_weight=20.0,
         chase_reward_inverse=True,
         full_state_other_agents=False,
         backend="positional",
@@ -190,10 +191,11 @@ class Ants(PipelineEnv):
         self._forward_reward_weight = forward_reward_weight
         self._chase_reward_weight = chase_reward_weight
         self._chase_reward_inverse = chase_reward_inverse
+        self._tag_reward_weight = tag_reward_weight
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = True
-        self._and_done_flag = False
+        self._or_done_flag = False
+        self._and_done_flag = True
         self._full_state_other_agents = full_state_other_agents
 
         if exclude_current_positions_from_observation:
@@ -231,8 +233,15 @@ class Ants(PipelineEnv):
             "y_velocity": zero_init,
             "forward_reward": zero_init,
             "reward_chase": zero_init,
+            "tag_reward": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
+
+    def _tag_reward(self, pipeline_state, threshold=0.5):
+        norm = jp.linalg.norm(self._norm(pipeline_state))
+        is_below_threshold = jp.any(norm < threshold)
+        threshold_int = is_below_threshold.astype(jp.float32)
+        return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
 
     def _get_forward_reward(
         self, pipeline_state: base.State, pipeline_state0: base.State
@@ -351,12 +360,14 @@ class Ants(PipelineEnv):
                 self._healthy_reward * jp.ones(self.num_agents) * is_healthy
             )
 
+        tag_reward = self._tag_reward(pipeline_state)
+
         ctrl_cost = self._control_reward(action)
         contact_cost = 0.0  # TODO: Implement contact cost
         chase_reward = self._chase_reward_fn(pipeline_state)
 
         obs = self._get_obs(pipeline_state)
-        reward = forward_reward + healthy_reward - ctrl_cost + chase_reward
+        reward = forward_reward + healthy_reward - ctrl_cost + chase_reward + tag_reward
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         x_pos = jp.concatenate(
@@ -384,6 +395,7 @@ class Ants(PipelineEnv):
             x_velocity=velocity_x,
             y_velocity=velocity_y,
             reward_chase=chase_reward,
+            reward_tag=tag_reward,
         )
 
         return state.replace(
