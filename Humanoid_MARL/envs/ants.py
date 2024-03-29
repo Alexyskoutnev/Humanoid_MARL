@@ -237,7 +237,7 @@ class Ants(PipelineEnv):
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
-    def _tag_reward(self, pipeline_state, threshold=0.5):
+    def _tag_reward(self, pipeline_state, threshold=1.0):
         norm = jp.linalg.norm(self._norm(pipeline_state))
         is_below_threshold = jp.any(norm < threshold)
         threshold_int = is_below_threshold.astype(jp.float32)
