@@ -233,7 +233,7 @@ class Ants(PipelineEnv):
             "y_velocity": zero_init,
             "forward_reward": zero_init,
             "reward_chase": zero_init,
-            "tag_reward": zero_init,
+            "reward_tag": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
