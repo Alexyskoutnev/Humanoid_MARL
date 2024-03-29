@@ -1,12 +1,12 @@
-num_timesteps: 50_000_000
-eval_reward_limit: 30000
-eval_frequency: 10
+num_timesteps: 500_000_000
+eval_reward_limit: 70000
+eval_frequency: 100
 episode_length: 1000
 unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 4
 discounting: 0.97
-learning_rate: 0.0003
+learning_rate: 0.0001
 entropy_cost: 0.02
 num_envs: 2048
 batch_size: 1024
@@ -16,7 +16,7 @@ debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-# model_path : "models/20240329_122125_ppo_ants.pt"
+# model_path : "models/20240329_122632_ppo_ants.pt"
 model_path : null
 runnning_avg_length : 3
 full_state : false

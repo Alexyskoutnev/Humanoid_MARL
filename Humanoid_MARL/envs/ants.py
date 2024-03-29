@@ -155,6 +155,7 @@ class Ants(PipelineEnv):
         contact_force_range=(-1.0, 1.0),
         reset_noise_scale=0.1,
         exclude_current_positions_from_observation=True,
+        forward_reward_weight=1.0,
         backend="positional",
         **kwargs,
     ):
@@ -183,11 +184,11 @@ class Ants(PipelineEnv):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
-        self._forward_reward_weight = 1.0
+        self._forward_reward_weight = forward_reward_weight
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = False
-        self._and_done_flag = True
+        self._or_done_flag = True
+        self._and_done_flag = False
         if exclude_current_positions_from_observation:
             self._q_dim = 13
             self._q_vel_dim = 14
@@ -220,8 +221,7 @@ class Ants(PipelineEnv):
             "reward_ctrl": zero_init,
             "x_position": zero_init,
             "y_position": zero_init,
-            # "distance_from_origin_a_1": zero,
-            # "distance_from_origin_a_2": zero,
+            "distance_from_origin": zero_init,
             "x_velocity": zero_init,
             "y_velocity": zero_init,
             "forward_reward": zero_init,
@@ -243,9 +243,7 @@ class Ants(PipelineEnv):
         )
         return jp.concatenate([agent_0_v_norm.reshape(-1), agent_1_v_norm.reshape(-1)])
 
-    def _get_forward_reward_x(
-        self, pipeline_state: base.State, pipeline_state0: base.State
-    ):
+    def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
         delta_x_a_1 = (pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]) / (
             self.dt + 0.001
         )
@@ -253,6 +251,15 @@ class Ants(PipelineEnv):
             self.dt + 0.001
         )
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
+
+    def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
+        delta_y_a_1 = (pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]) / (
+            self.dt + 0.001
+        )
+        delta_y_a_2 = pipeline_state.x.pos[9][1] - pipeline_state0.x.pos[9][1] / (
+            self.dt + 0.001
+        )
+        return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
         action = reshape_vector(
@@ -285,30 +292,35 @@ class Ants(PipelineEnv):
     def _chase_reward_fn(self, pipeline_state: base.State):
         pass
 
+    def _norm(self, pipeline_state: base.State):
+        com_a_1 = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 0].reshape(-1),
+                pipeline_state.x.pos[0, 1].reshape(-1),
+            ]
+        )
+        com_a_2 = jp.concatenate(
+            [
+                pipeline_state.x.pos[9, 0].reshape(-1),
+                pipeline_state.x.pos[9, 1].reshape(-1),
+            ]
+        )
+        norm_origin_distance_a_1 = jp.linalg.norm(com_a_1).reshape(-1)
+        norm_origin_distance_a_2 = jp.linalg.norm(com_a_2).reshape(-1)
+        norm = jp.concatenate([norm_origin_distance_a_1, norm_origin_distance_a_2])
+        return norm
+
     def step(self, state: State, action: jax.Array) -> State:
         """Run one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
         assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
 
-        # jax.debug.print("q: {x}", x=pipeline_state0.q)
-        # jax.debug.print("q: {x}", x=jp.isnan(pipeline_state0.q))
-        # lax.cond(
-        #     jp.isnan(pipeline_state0.q).any(),
-        #     true_fn,
-        #     false_fn,
-        #     pipeline_state0.q
-        # )
+        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
+        velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
 
-        # # nan_indices_q = jp.where(jp.isnan(pipeline_state0.q))
-        # if jp.isnan(pipeline_state0.q).any():
-        #     print("Indices of NaN values in q:", jp.isnan(pipeline_state0.q))
-        # # nan_indices_qd = jp.where(jp.isnan(pipeline_state0.qd))
-        # if jp.isnan(pipeline_state0.qd).any():
-        #     print("Indices of NaN values in qd:", jp.isnan(pipeline_state0.qd))
-        # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
-
-        velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
+        # velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
@@ -341,19 +353,19 @@ class Ants(PipelineEnv):
             ]
         )
 
-        # =========== MOCK INFO ===========
-        zero_init = jp.zeros(2)  # TODO: Implement velocity
-        # =========== MOCK INFO ===========
+        norm = self._norm(pipeline_state)
+
         state.metrics.update(
             reward_forward=forward_reward,
             reward_survive=healthy_reward,
             reward_ctrl=-ctrl_cost,
             x_position=x_pos,
             y_position=y_pos,
-            # reward_contact=-contact_cost,
-            x_velocity=zero_init,  # TODO: Implement velocity
-            y_velocity=zero_init,  # TODO: Implement velocity
-        )  # Mock metrics
+            distance_from_origin=norm,
+            x_velocity=velocity_x,
+            y_velocity=velocity_y,
+        )
+
         return state.replace(
             pipeline_state=pipeline_state, obs=obs, reward=reward, done=done
         )

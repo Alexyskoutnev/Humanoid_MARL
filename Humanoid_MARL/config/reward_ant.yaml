@@ -5,6 +5,7 @@ contact_cost_weight: 0.0005
 ctrl_cost_weight: 0.5
 # ctrl_cost_weight: 0.1
 healthy_reward: 1.0
+forward_reward_weight: 5.0
 healthy_z_range:
   - 0.2
   - 1.0
