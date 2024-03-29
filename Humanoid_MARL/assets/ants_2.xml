@@ -1,9 +1,9 @@
 <mujoco model="ant">
   <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
-  <option timestep="0.01" iterations="4" />
+  <option timestep="0.02" iterations="4" />
   <custom>
     <!-- brax custom params -->
-    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 1.2 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+    <!-- <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 1.2 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/> -->
     <numeric data="1000" name="constraint_limit_stiffness"/>
     <numeric data="4000" name="constraint_stiffness"/>
     <numeric data="10" name="constraint_ang_damping"/>
@@ -145,21 +145,21 @@
     </body>
   </worldbody>
   <actuator>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="10"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="10"/>
   </actuator>
 </mujoco>

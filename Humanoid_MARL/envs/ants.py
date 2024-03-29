@@ -287,8 +287,24 @@ class Ants(PipelineEnv):
         pipeline_state0 = state.pipeline_state
         assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
-        # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
-        velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
+
+        # jax.debug.print("q: {x}", x=pipeline_state0.q)
+        # jax.debug.print("q: {x}", x=jp.isnan(pipeline_state0.q))
+        # lax.cond(
+        #     jp.isnan(pipeline_state0.q).any(),
+        #     true_fn,
+        #     false_fn,
+        #     pipeline_state0.q
+        # )
+
+        # # nan_indices_q = jp.where(jp.isnan(pipeline_state0.q))
+        # if jp.isnan(pipeline_state0.q).any():
+        #     print("Indices of NaN values in q:", jp.isnan(pipeline_state0.q))
+        # # nan_indices_qd = jp.where(jp.isnan(pipeline_state0.qd))
+        # if jp.isnan(pipeline_state0.qd).any():
+        #     print("Indices of NaN values in qd:", jp.isnan(pipeline_state0.qd))
+        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        # velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
@@ -333,7 +349,6 @@ class Ants(PipelineEnv):
             # reward_contact=-contact_cost,
             x_velocity=zero_init,  # TODO: Implement velocity
             y_velocity=zero_init,  # TODO: Implement velocity
-            forward_reward=forward_reward,
         )  # Mock metrics
         return state.replace(
             pipeline_state=pipeline_state, obs=obs, reward=reward, done=done

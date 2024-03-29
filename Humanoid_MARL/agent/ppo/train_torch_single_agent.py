@@ -292,7 +292,8 @@ def train(
     agent = Agent(
         policy_layers, value_layers, entropy_cost, discounting, reward_scaling, device
     )
-    agent = torch.jit.script(agent.to(device))
+    # agent = torch.jit.script(agent.to(device))
+    agent = agent.to(device)
     optimizer = optim.Adam(agent.parameters(), lr=learning_rate)
 
     sps = 0

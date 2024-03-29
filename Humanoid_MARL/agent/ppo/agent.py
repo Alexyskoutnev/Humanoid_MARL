@@ -54,12 +54,12 @@ class Agent(nn.Module):
         self, loc: torch.Tensor, scale: torch.Tensor
     ) -> torch.Tensor:
 
-        if torch.isnan(
-            scale
-        ).any():  # TODO: Resolve this issue why the Brax simulator is returning NaN values?
-            nan_indices = torch.isnan(scale)
-            # print("Warning: NaN values detected in scale at indices:", nan_indices)
-            scale[nan_indices] = 0.001
+        # if torch.isnan(
+        #     scale
+        # ).any():  # TODO: Resolve this issue why the Brax simulator is returning NaN values?
+        #     nan_indices = torch.isnan(scale)
+        #     # print("Warning: NaN values detected in scale at indices:", nan_indices)
+        #     scale[nan_indices] = 0.001
         return torch.normal(loc, scale)
 
     @classmethod
@@ -68,11 +68,11 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def dist_entropy(self, loc: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
-        if torch.isnan(
-            scale
-        ).any():  # TODO : Resolve this issue why the Brax simulator is returning NaN values?
-            nan_indices = torch.isnan(scale).squeeze()
-            scale[nan_indices] = 0.001
+        # if torch.isnan(
+        #     scale
+        # ).any():  # TODO : Resolve this issue why the Brax simulator is returning NaN values?
+        #     nan_indices = torch.isnan(scale).squeeze()
+        #     scale[nan_indices] = 0.001
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         entropy = 0.5 + log_normalized
         entropy = entropy * torch.ones_like(loc)
@@ -111,13 +111,11 @@ class Agent(nn.Module):
     def get_logits_action(
         self, observation: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # observation = self.normalize(observation)
+        observation = self.normalize(observation)
         logits = self.policy(observation)
         loc, scale = self.dist_create(logits)
+        # action = self.dist_sample_no_postprocess(loc, scale).clip(-0.1, 0.1)
         action = self.dist_sample_no_postprocess(loc, scale)
-        if torch.isnan(action).any():  # If any of the actions are nan, set them to 0
-            nan_indices = torch.isnan(action)
-            action[nan_indices] = 0
         return logits, action
 
     @torch.jit.export
@@ -167,8 +165,7 @@ class Agent(nn.Module):
         td_obs = td["observation"][
             :, :, agent_idx, :
         ]  # [unroll_length, batch_size, obs_dim]
-        # observation = self.normalize(td_obs)  # [unroll_length, batch_size, obs_dim]
-        observation = td_obs
+        observation = self.normalize(td_obs)  # [unroll_length, batch_size, obs_dim]
         policy_logits = self.policy(
             observation[:-1]
         )  # [unroll_length, batch_size, action_dim] : [2, 256, 34]

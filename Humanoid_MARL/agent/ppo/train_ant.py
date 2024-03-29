@@ -109,7 +109,7 @@ def _nan_filter(*arr: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
         if isinstance(a, torch.Tensor):
             nan_mask = torch.isnan(a)
             if torch.any(nan_mask):
-                a = torch.where(nan_mask, torch.tensor(0.0), a)
+                a = torch.where(nan_mask, torch.tensor(0.1), a)
         _arr_return.append(a)
     return tuple(_arr_return)
 
@@ -231,7 +231,9 @@ def train_unroll(
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
             logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
-            observation, reward, done, info = env.step(Agent.dist_postprocess(action))
+            observation, reward, done, info = _nan_filter(
+                env.step(Agent.dist_postprocess(action))
+            )
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
             one_unroll.action.append(action)
@@ -264,27 +266,6 @@ def update_normalization_time_series(
         obs = get_obs_time_series(observation, dims, num_agents)
         for idx, agent in enumerate(agents):
             agent.update_normalization(obs[:, :, idx, :])
-
-
-# def update_normalization(
-#     agents: List[Agent],
-#     observation: torch.Tensor,
-#     dims: Tuple[int],
-#     get_full_state: bool = False,
-# ) -> None:
-#     num_agents = len(agents)
-#     observation = observation.view(observation.shape[0] * observation.shape[1], -1)
-#     if num_agents == 1:
-#         agent = agents[0]
-#         agent.update_normalization(observation)
-#     else:
-#         obs = get_obs(observation, dims, num_agents)
-#         breakpoint()
-#         for idx, agent in enumerate(agents):
-#             if get_full_state:
-#                 agent.update_normalization(obs[:])
-#             else:
-#                 agent.update_normalization(obs[:, idx, :])
 
 
 def update_normalization(
@@ -612,11 +593,11 @@ def train(
 
             td = sd_map(unroll_first, td)
             # update normalization statistics
-            # update_normalization(
-            #     agents,
-            #     td.observation,
-            #     env.obs_dims_tuple,
-            # )
+            update_normalization(
+                agents,
+                td.observation,
+                env.obs_dims_tuple,
+            )
             for update_epoch in range(num_update_epochs):
                 epoch_loss = 0.0
                 # shuffle and batch the data
@@ -660,7 +641,7 @@ def train(
 
                 if not debug:
                     logger.log_epoch_loss(epoch_loss / num_epoch + 1)
-                    print(f"epoch {num_epoch} : [{epoch_loss}]")
+                    # print(f"epoch {num_epoch} : [{epoch_loss}]")
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
