@@ -156,6 +156,8 @@ class Ants(PipelineEnv):
         reset_noise_scale=0.1,
         exclude_current_positions_from_observation=True,
         forward_reward_weight=1.0,
+        chase_reward_weight=1.0,
+        chase_reward_inverse=True,
         backend="positional",
         **kwargs,
     ):
@@ -185,6 +187,8 @@ class Ants(PipelineEnv):
             exclude_current_positions_from_observation
         )
         self._forward_reward_weight = forward_reward_weight
+        self._chase_reward_weight = chase_reward_weight
+        self._chase_reward_inverse = chase_reward_inverse
         self.num_agents = 2
         self._dims = None
         self._or_done_flag = True
@@ -225,6 +229,7 @@ class Ants(PipelineEnv):
             "x_velocity": zero_init,
             "y_velocity": zero_init,
             "forward_reward": zero_init,
+            "reward_chase": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -242,6 +247,21 @@ class Ants(PipelineEnv):
             (delta_x / (self.dt + 0.001)) ** 2 + (delta_y / (self.dt + 0.001)) ** 2
         )
         return jp.concatenate([agent_0_v_norm.reshape(-1), agent_1_v_norm.reshape(-1)])
+
+    def _chase_reward_fn(self, pipeline_state):
+        a_1 = jp.sqrt(pipeline_state.x.pos[0, 0] ** 2 + pipeline_state.x.pos[0, 1] ** 2)
+        a_2 = jp.sqrt(pipeline_state.x.pos[9, 0] ** 2 + pipeline_state.x.pos[9, 1] ** 2)
+        _dist_diff = jp.abs(a_1 - a_2)
+        if self._chase_reward_inverse:
+            persuader_reward = jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight
+            evader_reward = (
+                -(jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight)
+                + self._chase_reward_weight
+            )
+        else:
+            persuader_reward = -_dist_diff * self._chase_reward_weight
+            evader_reward = _dist_diff * self._chase_reward_weight
+        return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
         delta_x_a_1 = (pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]) / (
@@ -289,9 +309,6 @@ class Ants(PipelineEnv):
             env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
             return done_signals, env_done
 
-    def _chase_reward_fn(self, pipeline_state: base.State):
-        pass
-
     def _norm(self, pipeline_state: base.State):
         com_a_1 = jp.concatenate(
             [
@@ -335,9 +352,10 @@ class Ants(PipelineEnv):
 
         ctrl_cost = self._control_reward(action)
         contact_cost = 0.0  # TODO: Implement contact cost
+        chase_reward = self._chase_reward_fn(pipeline_state)
 
         obs = self._get_obs(pipeline_state)
-        reward = forward_reward + healthy_reward - ctrl_cost
+        reward = forward_reward + healthy_reward - ctrl_cost + chase_reward
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         x_pos = jp.concatenate(
@@ -364,6 +382,7 @@ class Ants(PipelineEnv):
             distance_from_origin=norm,
             x_velocity=velocity_x,
             y_velocity=velocity_y,
+            reward_chase=chase_reward,
         )
 
         return state.replace(
