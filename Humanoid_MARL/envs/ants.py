@@ -158,6 +158,7 @@ class Ants(PipelineEnv):
         forward_reward_weight=1.0,
         chase_reward_weight=1.0,
         chase_reward_inverse=True,
+        full_state_other_agents=False,
         backend="positional",
         **kwargs,
     ):
@@ -193,12 +194,12 @@ class Ants(PipelineEnv):
         self._dims = None
         self._or_done_flag = True
         self._and_done_flag = False
+        self._full_state_other_agents = full_state_other_agents
+
         if exclude_current_positions_from_observation:
             self._q_dim = 13
             self._q_vel_dim = 14
-        else:
-            self._q_dim = 15
-            self._q_vel_dim = 14
+            self._q_other = 15
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -400,21 +401,30 @@ class Ants(PipelineEnv):
             qpos = qpos[
                 np.logical_not(np.isin(np.arange(len(qpos)), indices_to_remove))
             ]
+        if self._full_state_other_agents:
+            positions = pipeline_state.q
+            a1_pos = positions[0:15]
+            a2_pos = positions[15:30]
+            positions_other_agents = jp.concatenate([a2_pos, a1_pos])
+            return jp.concatenate([qpos] + [qvel] + [positions_other_agents])  # noqa
         return jp.concatenate([qpos] + [qvel])
 
     @property
     def dims(self):
         action_dim = int(self.sys.act_size() // self.num_agents)
-        # if self._include_other_agents_state:
-        #     raise NotImplementedError("include_other_agents_state not implemented.")
-        # elif self._full_state_other_agents:
-        #     raise NotImplementedError("full_state_other_agents not implemented.")
-        # else:
-        return (
-            self._q_dim,
-            self._q_vel_dim,
-            action_dim,
-        )
+        if self._full_state_other_agents:
+            return (
+                self._q_dim,
+                self._q_vel_dim,
+                self._q_other,
+                action_dim,
+            )
+        else:
+            return (
+                self._q_dim,
+                self._q_vel_dim,
+                action_dim,
+            )
 
     @property
     def obs_dims(self):

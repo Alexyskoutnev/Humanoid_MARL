@@ -15,3 +15,4 @@ contact_force_range:
   - 1.0
 reset_noise_scale: 0.1
 chase_reward_inverse : false
+full_state_other_agents : true
