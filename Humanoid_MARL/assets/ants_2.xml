@@ -3,7 +3,7 @@
   <option timestep="0.02" iterations="4" />
   <custom>
     <!-- brax custom params -->
-    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 -5.00 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 2.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
     <numeric data="1000" name="constraint_limit_stiffness"/>
     <numeric data="4000" name="constraint_stiffness"/>
     <numeric data="10" name="constraint_ang_damping"/>
@@ -35,7 +35,7 @@
 
     <body name="torso_a_1" pos="0 0 0.75">
       <camera name="track_a_1" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
-      <geom name="torso_geom_a_1" pos="0 0 0" size="0.25" type="sphere" material="red"/>
+      <geom contype="2" name="torso_geom_a_1" pos="0 0 0" size="0.25" type="sphere" material="red"/>
       <joint armature="0" damping="0" limited="false" margin="0.01" name="root_a_1" pos="0 0 0" type="free"/>
       <body name="front_left_leg_a_1" pos="0 0 0">
         <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="aux_1_geom_a_1" size="0.08" type="capsule" material="red"/>
@@ -89,7 +89,7 @@
 
     <body name="torso_a_2" pos="2.1 0 0.75">
       <camera name="track_a_2" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
-      <geom name="torso_geom_a_2" pos="0 0 0" size="0.25" type="sphere" material="blue"/>
+      <geom contype="2" name="torso_geom_a_2" pos="0 0 0" size="0.25" type="sphere" material="blue"/>
       <joint armature="0" damping="0" limited="false" margin="0.01" name="root_a_2" pos="0 0 0" type="free"/>
 
       <body name="front_left_leg_a_2" pos="0 0 0">
@@ -143,25 +143,36 @@
           </body>
         </body>
       </body>
-
     </body>
+    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 5 1" pos="5 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 5 1" pos="0 5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 5 1" pos="0 -5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 5 1" pos="-5 0 1"/>
   </worldbody>
   <actuator>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="150"/>
+    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="1"/> -->
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="150"/>
   </actuator>
 </mujoco>

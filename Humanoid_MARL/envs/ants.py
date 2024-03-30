@@ -157,15 +157,16 @@ class Ants(PipelineEnv):
         exclude_current_positions_from_observation=True,
         forward_reward_weight=1.0,
         chase_reward_weight=1.0,
-        tag_reward_weight=20.0,
+        tag_reward_weight=0.0,
         chase_reward_inverse=True,
         full_state_other_agents=False,
         backend="positional",
         **kwargs,
     ):
 
-        ant_path = os.path.join(PACKAGE_ROOT, "assets", "ants_2.xml")
-        sys = mjcf.load(ant_path)
+        # ant_path = os.path.join(PACKAGE_ROOT, "assets", "ants_2.xml")
+        ant_path_wall = os.path.join(PACKAGE_ROOT, "assets", "ants_2_walls.xml")
+        sys = mjcf.load(ant_path_wall)
 
         n_frames = 5
 
@@ -237,7 +238,7 @@ class Ants(PipelineEnv):
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
-    def _tag_reward(self, pipeline_state, threshold=1.0):
+    def _tag_reward(self, pipeline_state, threshold=2.0):
         norm = jp.linalg.norm(self._norm(pipeline_state))
         is_below_threshold = jp.any(norm < threshold)
         threshold_int = is_below_threshold.astype(jp.float32)
@@ -274,21 +275,17 @@ class Ants(PipelineEnv):
         return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
-        delta_x_a_1 = (pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]) / (
-            self.dt + 0.001
-        )
-        delta_x_a_2 = pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0] / (
-            self.dt + 0.001
+        delta_x_a_1 = (
+            pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
+        ) / self.dt
+        delta_x_a_2 = (
+            (pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0]) / self.dt * 0
         )
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
-        delta_y_a_1 = (pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]) / (
-            self.dt + 0.001
-        )
-        delta_y_a_2 = pipeline_state.x.pos[9][1] - pipeline_state0.x.pos[9][1] / (
-            self.dt + 0.001
-        )
+        delta_y_a_1 = pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]
+        delta_y_a_2 = pipeline_state.x.pos[9][1] - pipeline_state0.x.pos[9][1]
         return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
@@ -343,11 +340,10 @@ class Ants(PipelineEnv):
         assert pipeline_state0 is not None
         pipeline_state = self.pipeline_step(pipeline_state0, action)
 
-        velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
+        velocity = self._get_velocity_x(pipeline_state, pipeline_state0)
         velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
         velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
-
-        # velocity = self._get_forward_reward_x(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
@@ -367,7 +363,7 @@ class Ants(PipelineEnv):
         chase_reward = self._chase_reward_fn(pipeline_state)
 
         obs = self._get_obs(pipeline_state)
-        reward = forward_reward + healthy_reward - ctrl_cost + chase_reward + tag_reward
+        reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         x_pos = jp.concatenate(
