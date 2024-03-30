@@ -260,15 +260,15 @@ class Ants(PipelineEnv):
         return jp.concatenate([agent_0_v_norm.reshape(-1), agent_1_v_norm.reshape(-1)])
 
     def _chase_reward_fn(self, pipeline_state):
-        a_1 = jp.sqrt(pipeline_state.x.pos[0, 0] ** 2 + pipeline_state.x.pos[0, 1] ** 2)
-        a_2 = jp.sqrt(pipeline_state.x.pos[9, 0] ** 2 + pipeline_state.x.pos[9, 1] ** 2)
-        _dist_diff = jp.abs(a_1 - a_2)
+        _dist_diff = jp.sqrt(
+            (jp.abs(pipeline_state.x.pos[0, 0]) - jp.abs(pipeline_state.x.pos[9, 0]))
+            ** 2
+            + (jp.abs(pipeline_state.x.pos[0, 1]) - jp.abs(pipeline_state.x.pos[9, 1]))
+            ** 2
+        )
         if self._chase_reward_inverse:
-            persuader_reward = jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight
-            evader_reward = (
-                -(jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight)
-                + self._chase_reward_weight
-            )
+            persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
+            evader_reward = -(jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight)
         else:
             persuader_reward = -_dist_diff * self._chase_reward_weight
             evader_reward = _dist_diff * self._chase_reward_weight
@@ -279,8 +279,8 @@ class Ants(PipelineEnv):
             pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
         ) / self.dt
         delta_x_a_2 = (
-            (pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0]) / self.dt * 0
-        )
+            pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0]
+        ) / self.dt
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
