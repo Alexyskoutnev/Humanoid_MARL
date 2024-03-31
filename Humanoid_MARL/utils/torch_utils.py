@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 import os
 import torch
 from datetime import datetime
@@ -83,3 +83,14 @@ def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[
         raise ValueError("Some agents failed to load")
     print(f"Models loaded from {filename}")
     return agents
+
+
+def _nan_filter(*arr: Tuple[torch.Tensor]) -> Tuple[torch.Tensor]:
+    _arr_return = []
+    for a in arr[0]:
+        if isinstance(a, torch.Tensor):
+            nan_mask = torch.isnan(a)
+            if torch.any(nan_mask):
+                a = torch.where(nan_mask, torch.tensor(0.1), a)
+        _arr_return.append(a)
+    return tuple(_arr_return)

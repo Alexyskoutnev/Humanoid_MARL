@@ -7,7 +7,6 @@ CONFIG_TRAIN_HUMANOID = os.path.join(PACKAGE_ROOT, "config/training_humanoid.yam
 CONFIG_TRAIN_ANT = os.path.join(PACKAGE_ROOT, "config/training_ant.yaml")
 CONFIG_TRAIN_POINT_MASS = os.path.join(PACKAGE_ROOT, "config/training_point_mass.yaml")
 
-# CONFIG_TRAIN_TEST = os.path.join(PACKAGE_ROOT, "config/training_test.yaml")
 CONFIG_NETWORK_HUMANOID = os.path.join(PACKAGE_ROOT, "config/network_humanoid.yaml")
 CONFIG_NETWORK_ANT = os.path.join(PACKAGE_ROOT, "config/network_ant.yaml")
 CONFIG_NETWORK_POINT_MASS = os.path.join(PACKAGE_ROOT, "config/network_point_mass.yaml")
