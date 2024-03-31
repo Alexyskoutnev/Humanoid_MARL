@@ -2,9 +2,9 @@ MLP : true
 LSTM : false
 TRANSFORMER : false
 
-POLICY_LAYERS : [6, 64, 64, 4]
+POLICY_LAYERS : [9, 64, 64, 4]
 
-VALUE_LAYERS : [6, 64, 64, 1]
+VALUE_LAYERS : [9, 64, 64, 1]
 
 HIDDEN_SIZE : 64
 NUM_LAYERS : 1

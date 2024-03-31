@@ -53,8 +53,8 @@ class Point_Mass(PipelineEnv):
         **kwargs,
     ):
 
-        # ant_path = os.path.join(PACKAGE_ROOT, "assets", "ants_2.xml")
-        ant_path_wall = os.path.join(PACKAGE_ROOT, "assets", "point_mass.xml")
+        # ant_path_wall = os.path.join(PACKAGE_ROOT, "assets", "point_mass.xml")
+        ant_path_wall = os.path.join(PACKAGE_ROOT, "assets", "point_mass_walls.xml")
         sys = mjcf.load(ant_path_wall)
 
         n_frames = 5
@@ -112,23 +112,19 @@ class Point_Mass(PipelineEnv):
         _, done, zero = jp.zeros(3)
         dummy_val = jp.zeros(2)
         reward = jp.zeros(2)
-        # zero_init = jp.zeros(2)
         metrics = {
             "reward_forward": dummy_val,
-            # "reward_survive": dummy_val,
-            # "reward_ctrl": dummy_val,
             "x_position": dummy_val,
             "y_position": dummy_val,
             # "distance_from_origin": dummy_val,
             "x_velocity": dummy_val,
             "y_velocity": dummy_val,
-            # "forward_reward": dummy_val,
             "reward_chase": dummy_val,
             "reward_tag": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
-    def _tag_reward(self, pipeline_state, threshold=2.0):
+    def _tag_reward(self, pipeline_state, threshold=5.0):
         norm = jp.linalg.norm(self._norm(pipeline_state))
         is_below_threshold = jp.any(norm < threshold)
         threshold_int = is_below_threshold.astype(jp.float32)
@@ -141,17 +137,15 @@ class Point_Mass(PipelineEnv):
 
     def _chase_reward_fn(self, pipeline_state):
         _dist_diff = jp.sqrt(
-            (jp.abs(pipeline_state.x.pos[0, 0]) - jp.abs(pipeline_state.x.pos[3, 0]))
-            ** 2
-            + (jp.abs(pipeline_state.x.pos[0, 1]) - jp.abs(pipeline_state.x.pos[3, 1]))
-            ** 2
+            (pipeline_state.x.pos[0, 0] - pipeline_state.x.pos[3, 0]) ** 2
+            + (pipeline_state.x.pos[0, 1] - pipeline_state.x.pos[3, 1]) ** 2
         )
         if self._chase_reward_inverse:
             persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
             evader_reward = -(jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight)
         else:
-            persuader_reward = _dist_diff * self._chase_reward_weight
-            evader_reward = -_dist_diff * self._chase_reward_weight
+            persuader_reward = -_dist_diff * self._chase_reward_weight
+            evader_reward = _dist_diff * self._chase_reward_weight
         return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
@@ -203,7 +197,6 @@ class Point_Mass(PipelineEnv):
         tag_reward = self._tag_reward(pipeline_state)
 
         # ctrl_cost = self._control_reward(action)
-        # contact_cost = 0.0  # TODO: Implement contact cost
         chase_reward = self._chase_reward_fn(pipeline_state)
         obs = self._get_obs(pipeline_state)
         # reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
@@ -248,21 +241,11 @@ class Point_Mass(PipelineEnv):
         # qpos = pipeline_state.q
         qpos = pipeline_state.x.pos.ravel()
         qvel = pipeline_state.xd.vel.ravel()
-        # qvel = pipeline_state.qd
-        # breakpoint()
-        # if self._exclude_current_positions_from_observation:
-        #     indices_to_remove = np.array(
-        #         [0, 1, 15, 16]
-        #     )  # Removing CoM x-y for ant 1 and 2
-        #     qpos = qpos[
-        #         np.logical_not(np.isin(np.arange(len(qpos)), indices_to_remove))
-        #     ]
-        # if self._full_state_other_agents:
-        #     positions = pipeline_state.q
-        #     a1_pos = positions[0:15]
-        #     a2_pos = positions[15:30]
-        #     positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-        #     return jp.concatenate([qpos] + [qvel] + [positions_other_agents])  # noqa
+        if self._full_state_other_agents:
+            a1_pos = qpos[0:3]
+            a2_pos = qpos[3:6]
+            positions_other_agents = jp.concatenate([a2_pos, a1_pos])
+            return jp.concatenate([qpos] + [qvel] + [positions_other_agents])  # noqa
         return jp.concatenate([qpos] + [qvel])
 
     @property
@@ -272,15 +255,11 @@ class Point_Mass(PipelineEnv):
             return (
                 self._q_dim,
                 self._q_vel_dim,
-                # self._q_other,
+                self._q_other,
                 action_dim,
             )
         else:
-            return (
-                # self._q_dim,
-                # self._q_vel_dim,
-                action_dim,
-            )
+            return (action_dim,)
 
     @property
     def obs_dims(self):

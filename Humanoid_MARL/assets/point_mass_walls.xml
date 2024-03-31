@@ -36,15 +36,19 @@
     <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
     <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="0 0 0" size="40 40 40" type="plane" rgba="0.5 0.5 0.5 1.0"/>
     <body name="point_mass_a1" pos="0 0 0.256">
-      <geom name="pointmass_a_1" type="sphere" size=".25"/>
+      <geom contype="2" name="pointmass_a_1" type="sphere" size=".25"/>
       <joint name="root_x_a_1" type="slide" pos="0 0 0" axis="1 0 0" range="-100 100"/>
       <joint name="root_y_a_1" type="slide" pos="0 0 0" axis="0 1 0" range="-100 100"/>
     </body>
     <body name="point_mass_a2" pos="1 0 0.256">
-      <geom name="pointmass_a_2" type="sphere" size=".25"/>
+      <geom contype="2" name="pointmass_a_2" type="sphere" size=".25" />
       <joint name="root_x_a_2" type="slide" pos="0 0 0" axis="1 0 0" range="-100 100"/>
       <joint name="root_y_a_2" type="slide" pos="0 0 0" axis="0 1 0" range="-100 100"/>
     </body>
+    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 5 1" pos="5 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 5 1" pos="0 5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 5 1" pos="0 -5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 5 1" pos="-5 0 1"/>
   </worldbody>
 
   <actuator>
