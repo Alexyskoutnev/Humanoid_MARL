@@ -151,28 +151,20 @@
   </worldbody>
   <actuator>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="50"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="1"/> -->
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="150"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="150"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="150"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="50"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="5"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="150"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="150"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="150"/>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="150"/>
-    <!-- <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="1"/> -->
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="50"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="150"/>
   </actuator>
 </mujoco>
