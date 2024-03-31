@@ -20,7 +20,7 @@ gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
 def cmd_args():
     parser = argparse.ArgumentParser(description="Train PPO")
     parser.add_argument(
-        "-e", "--env_name", type=str, default="point_mass", help="environment name"
+        "-e", "--env_name", type=str, default="ants", help="environment name"
     )
     args = parser.parse_args()
     return args

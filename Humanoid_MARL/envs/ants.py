@@ -199,10 +199,10 @@ class Ants(PipelineEnv):
         self._and_done_flag = True
         self._full_state_other_agents = full_state_other_agents
 
-        if exclude_current_positions_from_observation:
-            self._q_dim = 13
-            self._q_vel_dim = 14
-            self._q_other = 15
+        if full_state_other_agents:
+            self._q_dim = 27
+            self._q_vel_dim = 27
+            self._q_other = 27
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -223,6 +223,7 @@ class Ants(PipelineEnv):
         _, done, zero = jp.zeros(3)
         reward = jp.zeros(2)
         zero_init = jp.zeros(2)
+
         metrics = {
             "reward_forward": zero_init,
             "reward_survive": zero_init,
@@ -400,21 +401,28 @@ class Ants(PipelineEnv):
 
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe ant body position and velocities."""
-        qpos = pipeline_state.q
-        qvel = pipeline_state.qd
+        # qpos = pipeline_state.q
+        qpos = pipeline_state.x.pos.ravel()
+        # qvel = pipeline_state.qd
+        qvel = pipeline_state.xd.vel.ravel()
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
-                [0, 1, 15, 16]
+                [0, 1, 26, 27]
             )  # Removing CoM x-y for ant 1 and 2
             qpos = qpos[
                 np.logical_not(np.isin(np.arange(len(qpos)), indices_to_remove))
             ]
         if self._full_state_other_agents:
-            positions = pipeline_state.q
-            a1_pos = positions[0:15]
-            a2_pos = positions[15:30]
-            positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-            return jp.concatenate([qpos] + [qvel] + [positions_other_agents])  # noqa
+            if not self._exclude_current_positions_from_observation:
+                a1_pos = qpos[0:27]
+                a2_pos = qpos[27:56]
+                positions_other_agents = jp.concatenate([a2_pos, a1_pos])
+                return jp.concatenate([qpos] + [qvel] + [positions_other_agents])
+            else:
+                a1_pos = qpos[0:25]
+                a2_pos = qpos[25:52]
+                positions_other_agents = jp.concatenate([a2_pos, a1_pos])
+                return jp.concatenate([qpos] + [qvel] + [positions_other_agents])
         return jp.concatenate([qpos] + [qvel])
 
     @property
