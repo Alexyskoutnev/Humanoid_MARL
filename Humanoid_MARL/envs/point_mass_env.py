@@ -68,7 +68,8 @@ class Point_Mass(PipelineEnv):
         super().__init__(sys=sys, backend=backend, **kwargs)
 
         self._q_dim = 3
-        self.num_agents = 1
+        self._q_vel_dim = 3
+        self.num_agents = 2
 
         self._ctrl_cost_weight = ctrl_cost_weight
         self._use_contact_forces = use_contact_forces
@@ -85,19 +86,15 @@ class Point_Mass(PipelineEnv):
         self._chase_reward_weight = chase_reward_weight
         self._chase_reward_inverse = chase_reward_inverse
         self._tag_reward_weight = tag_reward_weight
-        self.num_agents = 2
         self._dims = None
         self._or_done_flag = False
         self._and_done_flag = True
         self._full_state_other_agents = full_state_other_agents
 
         if exclude_current_positions_from_observation:
-            self._q_dim = 13
-            self._q_vel_dim = 14
-            self._q_other = 15
-
-        # if self._use_contact_forces:
-        #     raise NotImplementedError("use_contact_forces not implemented.")
+            self._q_dim = 3
+            self._q_vel_dim = 3
+            self._q_other = 3
 
     def reset(self, rng: jax.Array) -> State:
         """Resets the environment to an initial state."""
@@ -113,21 +110,21 @@ class Point_Mass(PipelineEnv):
         obs = self._get_obs(pipeline_state)
 
         _, done, zero = jp.zeros(3)
-        dummy_val = jp.zeros(1)
-        reward = jp.zeros(1)
+        dummy_val = jp.zeros(2)
+        reward = jp.zeros(2)
         # zero_init = jp.zeros(2)
         metrics = {
             "reward_forward": dummy_val,
-            "reward_survive": dummy_val,
-            "reward_ctrl": dummy_val,
-            "x_position": dummy_val,
-            "y_position": dummy_val,
-            "distance_from_origin": dummy_val,
-            "x_velocity": dummy_val,
-            "y_velocity": dummy_val,
-            "forward_reward": dummy_val,
-            "reward_chase": dummy_val,
-            "reward_tag": dummy_val,
+            # "reward_survive": dummy_val,
+            # "reward_ctrl": dummy_val,
+            # "x_position": dummy_val,
+            # "y_position": dummy_val,
+            # "distance_from_origin": dummy_val,
+            # "x_velocity": dummy_val,
+            # "y_velocity": dummy_val,
+            # "forward_reward": dummy_val,
+            # "reward_chase": dummy_val,
+            # "reward_tag": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -143,16 +140,19 @@ class Point_Mass(PipelineEnv):
         raise NotImplementedError("Chase reward not implemented.")
 
     def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
-        raise NotImplementedError("Velocity x not implemented.")
+        delta_x_a_1 = (
+            pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
+        ) / self.dt
+        delta_x_a_2 = (
+            pipeline_state.x.pos[3][0] - pipeline_state0.x.pos[3][0]
+        ) / self.dt
+        return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
         raise NotImplementedError("Velocity y not implemented.")
 
     def _control_reward(self, action):
         raise NotImplementedError("Control reward not implemented.")
-
-    def _check_is_healthy(self, pipeline_state, min_z, max_z):
-        raise NotImplementedError("Check is healthy not implemented.")
 
     def _norm(self, pipeline_state: base.State):
         raise NotImplementedError("Norm not implemented.")
@@ -164,30 +164,18 @@ class Point_Mass(PipelineEnv):
         pipeline_state = self.pipeline_step(pipeline_state0, action)
 
         # # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
-        # velocity = self._get_velocity_x(pipeline_state, pipeline_state0)
+        velocity = self._get_velocity_x(pipeline_state, pipeline_state0)
         # velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
         # velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
-        # forward_reward = velocity * self._forward_reward_weight
-        # min_z, max_z = self._healthy_z_range
-        # is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
-        # if self._terminate_when_unhealthy:
-        #     healthy_reward = (
-        #         self._healthy_reward * jp.ones(self.num_agents) * is_healthy
-        #     )
-        # else:
-        #     healthy_reward = (
-        #         self._healthy_reward * jp.ones(self.num_agents) * is_healthy
-        #     )
-
+        forward_reward = velocity * self._forward_reward_weight
         # tag_reward = self._tag_reward(pipeline_state)
 
         # ctrl_cost = self._control_reward(action)
         # contact_cost = 0.0  # TODO: Implement contact cost
         # chase_reward = self._chase_reward_fn(pipeline_state)
-        dummy_val = jp.zeros(1)
         obs = self._get_obs(pipeline_state)
         # reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
-        reward = jp.zeros(1)
+        reward = forward_reward
         # done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
         done = 0.0
 
@@ -207,16 +195,16 @@ class Point_Mass(PipelineEnv):
         # norm = self._norm(pipeline_state)
 
         state.metrics.update(
-            reward_forward=dummy_val,
-            reward_survive=dummy_val,
-            reward_ctrl=-dummy_val,
-            x_position=dummy_val,
-            y_position=dummy_val,
-            distance_from_origin=dummy_val,
-            x_velocity=dummy_val,
-            y_velocity=dummy_val,
-            reward_chase=dummy_val,
-            reward_tag=dummy_val,
+            reward_forward=forward_reward,
+            # reward_survive=dummy_val,
+            # reward_ctrl=-dummy_val,
+            # x_position=dummy_val,
+            # y_position=dummy_val,
+            # distance_from_origin=dummy_val,
+            # x_velocity=dummy_val,
+            # y_velocity=dummy_val,
+            # reward_chase=dummy_val,
+            # reward_tag=dummy_val,
         )
 
         return state.replace(
@@ -225,8 +213,11 @@ class Point_Mass(PipelineEnv):
 
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe point mass body position and velocities."""
-        qpos = pipeline_state.q
-        qvel = pipeline_state.qd
+        # qpos = pipeline_state.q
+        qpos = pipeline_state.x.pos.ravel()
+        qvel = pipeline_state.xd.vel.ravel()
+        # qvel = pipeline_state.qd
+        # breakpoint()
         # if self._exclude_current_positions_from_observation:
         #     indices_to_remove = np.array(
         #         [0, 1, 15, 16]
@@ -248,7 +239,7 @@ class Point_Mass(PipelineEnv):
         if self._full_state_other_agents:
             return (
                 self._q_dim,
-                # self._q_vel_dim,
+                self._q_vel_dim,
                 # self._q_other,
                 action_dim,
             )

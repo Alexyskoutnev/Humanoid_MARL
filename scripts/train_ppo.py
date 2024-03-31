@@ -9,6 +9,7 @@ from typing import Dict
 from Humanoid_MARL.agent.ppo.train_torch import train as train_humanoid
 from Humanoid_MARL.agent.ppo.train_lstm import train as train_lstm
 from Humanoid_MARL.agent.ppo.train_ant import train as train_ant
+from Humanoid_MARL.agent.ppo.train_point_mass import train as train_point_mass
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import load_config
 import Humanoid_MARL
@@ -19,7 +20,7 @@ gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
 def cmd_args():
     parser = argparse.ArgumentParser(description="Train PPO")
     parser.add_argument(
-        "-e", "--env_name", type=str, default="ants", help="environment name"
+        "-e", "--env_name", type=str, default="point_mass", help="environment name"
     )
     args = parser.parse_args()
     return args
@@ -61,6 +62,14 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
+        elif config["train_config"]["env_name"] == "point_mass":
+            train_point_mass(
+                **config["train_config"],
+                env_config=config["env_config"],
+                network_config=config["network_config"],
+                agent_config=config["agent_config"],
+            )
+
     else:
         if (
             config["train_config"]["env_name"] == "humanoids"
@@ -79,6 +88,14 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
+        elif config["train_config"]["env_name"] == "point_mass":
+            train_point_mass(
+                **config["train_config"],
+                env_config=config["env_config"],
+                network_config=config["network_config"],
+                agent_config=config["agent_config"],
+            )
+
     print(f"time to jit: {times[1] - times[0]}")
     print(f"time to train: {times[-1] - times[1]}")
 
