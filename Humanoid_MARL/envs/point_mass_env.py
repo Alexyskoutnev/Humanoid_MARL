@@ -117,19 +117,22 @@ class Point_Mass(PipelineEnv):
             "reward_forward": dummy_val,
             # "reward_survive": dummy_val,
             # "reward_ctrl": dummy_val,
-            # "x_position": dummy_val,
-            # "y_position": dummy_val,
+            "x_position": dummy_val,
+            "y_position": dummy_val,
             # "distance_from_origin": dummy_val,
-            # "x_velocity": dummy_val,
-            # "y_velocity": dummy_val,
+            "x_velocity": dummy_val,
+            "y_velocity": dummy_val,
             # "forward_reward": dummy_val,
-            # "reward_chase": dummy_val,
-            # "reward_tag": dummy_val,
+            "reward_chase": dummy_val,
+            "reward_tag": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
     def _tag_reward(self, pipeline_state, threshold=2.0):
-        raise NotImplementedError("Tag reward not implemented.")
+        norm = jp.linalg.norm(self._norm(pipeline_state))
+        is_below_threshold = jp.any(norm < threshold)
+        threshold_int = is_below_threshold.astype(jp.float32)
+        return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
 
     def _get_forward_reward(
         self, pipeline_state: base.State, pipeline_state0: base.State
@@ -137,7 +140,19 @@ class Point_Mass(PipelineEnv):
         raise NotImplementedError("Forward reward not implemented.")
 
     def _chase_reward_fn(self, pipeline_state):
-        raise NotImplementedError("Chase reward not implemented.")
+        _dist_diff = jp.sqrt(
+            (jp.abs(pipeline_state.x.pos[0, 0]) - jp.abs(pipeline_state.x.pos[3, 0]))
+            ** 2
+            + (jp.abs(pipeline_state.x.pos[0, 1]) - jp.abs(pipeline_state.x.pos[3, 1]))
+            ** 2
+        )
+        if self._chase_reward_inverse:
+            persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
+            evader_reward = -(jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight)
+        else:
+            persuader_reward = _dist_diff * self._chase_reward_weight
+            evader_reward = -_dist_diff * self._chase_reward_weight
+        return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def _get_velocity_x(self, pipeline_state: base.State, pipeline_state0: base.State):
         delta_x_a_1 = (
@@ -149,13 +164,30 @@ class Point_Mass(PipelineEnv):
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
-        raise NotImplementedError("Velocity y not implemented.")
+        delta_y_a_1 = pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]
+        delta_y_a_2 = pipeline_state.x.pos[3][1] - pipeline_state0.x.pos[3][1]
+        return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
         raise NotImplementedError("Control reward not implemented.")
 
     def _norm(self, pipeline_state: base.State):
-        raise NotImplementedError("Norm not implemented.")
+        com_a_1 = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 0].reshape(-1),
+                pipeline_state.x.pos[0, 1].reshape(-1),
+            ]
+        )
+        com_a_2 = jp.concatenate(
+            [
+                pipeline_state.x.pos[3, 0].reshape(-1),
+                pipeline_state.x.pos[3, 1].reshape(-1),
+            ]
+        )
+        norm_origin_distance_a_1 = jp.linalg.norm(com_a_1).reshape(-1)
+        norm_origin_distance_a_2 = jp.linalg.norm(com_a_2).reshape(-1)
+        norm = jp.concatenate([norm_origin_distance_a_1, norm_origin_distance_a_2])
+        return norm
 
     def step(self, state: State, action: jax.Array) -> State:
         """Run one timestep of the environment's dynamics."""
@@ -165,32 +197,32 @@ class Point_Mass(PipelineEnv):
 
         # # velocity = self._get_forward_reward(pipeline_state, pipeline_state0)
         velocity = self._get_velocity_x(pipeline_state, pipeline_state0)
-        # velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
-        # velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
+        velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
+        velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
-        # tag_reward = self._tag_reward(pipeline_state)
+        tag_reward = self._tag_reward(pipeline_state)
 
         # ctrl_cost = self._control_reward(action)
         # contact_cost = 0.0  # TODO: Implement contact cost
-        # chase_reward = self._chase_reward_fn(pipeline_state)
+        chase_reward = self._chase_reward_fn(pipeline_state)
         obs = self._get_obs(pipeline_state)
         # reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
-        reward = forward_reward
+        reward = forward_reward + chase_reward + tag_reward
         # done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
         done = 0.0
 
-        # x_pos = jp.concatenate(
-        #     [
-        #         pipeline_state.x.pos[0, 0].reshape(-1),
-        #         pipeline_state.x.pos[9, 0].reshape(-1),
-        #     ]
-        # )
-        # y_pos = jp.concatenate(
-        #     [
-        #         pipeline_state.x.pos[0, 1].reshape(-1),
-        #         pipeline_state.x.pos[9, 1].reshape(-1),
-        #     ]
-        # )
+        x_pos = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 0].reshape(-1),
+                pipeline_state.x.pos[3, 0].reshape(-1),
+            ]
+        )
+        y_pos = jp.concatenate(
+            [
+                pipeline_state.x.pos[0, 1].reshape(-1),
+                pipeline_state.x.pos[3, 1].reshape(-1),
+            ]
+        )
 
         # norm = self._norm(pipeline_state)
 
@@ -198,13 +230,13 @@ class Point_Mass(PipelineEnv):
             reward_forward=forward_reward,
             # reward_survive=dummy_val,
             # reward_ctrl=-dummy_val,
-            # x_position=dummy_val,
-            # y_position=dummy_val,
+            x_position=x_pos,
+            y_position=y_pos,
             # distance_from_origin=dummy_val,
-            # x_velocity=dummy_val,
-            # y_velocity=dummy_val,
-            # reward_chase=dummy_val,
-            # reward_tag=dummy_val,
+            x_velocity=velocity_x,
+            y_velocity=velocity_y,
+            reward_chase=chase_reward,
+            reward_tag=tag_reward,
         )
 
         return state.replace(
