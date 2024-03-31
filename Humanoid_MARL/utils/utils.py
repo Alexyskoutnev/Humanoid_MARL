@@ -49,6 +49,8 @@ def load_reward_config(path: str, env: str) -> Dict:
         path = os.path.join(CONFIG_REWARD, "reward_humanoids.yaml")
     elif env in ["ants", "ants_debug"]:
         path = os.path.join(CONFIG_REWARD, "reward_ant.yaml")
+    elif env in ["point_mass"]:
+        path = os.path.join(CONFIG_REWARD, "reward_point_mass.yaml")
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -83,6 +85,18 @@ def load_config(env_name: str = "humanoids") -> Dict:
         env_config = load_reward_config(CONFIG_REWARD, train_config["env_name"])
         agent_config = load_agent_config(CONFIG_AGENT_ANT)
         network_config = load_network_config(CONFIG_NETWORK_ANT)
+        return {
+            "env_name": train_config["env_name"],
+            "env_config": env_config,
+            "agent_config": agent_config,
+            "network_config": network_config,
+            "train_config": train_config,
+        }
+    elif env_name in ["point_mass"]:
+        train_config = load_train_config(CONFIG_TRAIN_POINT_MASS)
+        env_config = load_reward_config(CONFIG_REWARD, train_config["env_name"])
+        agent_config = load_agent_config(CONFIG_AGENT_POINT_MASS)
+        network_config = load_network_config(CONFIG_NETWORK_POINT_MASS)
         return {
             "env_name": train_config["env_name"],
             "env_config": env_config,

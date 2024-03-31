@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 import os
 import torch
 from datetime import datetime
@@ -34,7 +34,34 @@ def save_models(
     print(f"Agents saved to {filename}")
 
 
+def load_models_empty(
+    filename: Union[str, None],
+    agent_class: Agent,
+    device: str = "cpu",
+    network_config: Optional[Dict] = None,
+    training_config: Optional[Dict] = None,
+    num_agents: Optional[int] = 2,
+) -> List[Agent]:
+    network_arch = {
+        "policy_layers": network_config["POLICY_LAYERS"],
+        "value_layers": network_config["VALUE_LAYERS"],
+        "entropy_cost": training_config["entropy_cost"],
+        "discounting": training_config["discounting"],
+        "reward_scaling": training_config["reward_scaling"],
+        "device": training_config["device"],
+        "network_config": network_config,
+    }
+    agents = []
+    for i in range(num_agents):
+        agent = agent_class(**network_arch).to(device)
+        agent.eval()
+        agents.append(agent)
+
+    return agents
+
+
 def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[Agent]:
+
     state_dicts = torch.load(filename)
     network_arch = state_dicts["network_arch"]
     num_agents = len(state_dicts["agents"])
