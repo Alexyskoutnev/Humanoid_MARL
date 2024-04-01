@@ -126,7 +126,6 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         env: PipelineEnv,
         seed: int = 0,
         backend: Optional[str] = None,
-        full_state: bool = False,
     ):
         self._env = env
         self.metadata = {
@@ -148,10 +147,7 @@ class VectorGymWrapper(gym.vector.VectorEnv):
         )
         obs_space = spaces.Box(-obs, obs, dtype="float32")
         self.observation_space = utils.batch_space(obs_space, self.num_envs)
-        if full_state:
-            self.obs_dims = env.observation_size
-        else:
-            self.obs_dims = env.observation_size // self.num_agents
+        self.obs_dims = env.observation_size // self.num_agents
 
         if hasattr(env, "obs_dims"):
             self.obs_dims_tuple = env.obs_dims

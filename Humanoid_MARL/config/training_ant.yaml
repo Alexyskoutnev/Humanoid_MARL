@@ -18,5 +18,4 @@ eval_flag : true
 notebook: false
 model_path : null
 runnning_avg_length : 5
-full_state : false
 time_series : false

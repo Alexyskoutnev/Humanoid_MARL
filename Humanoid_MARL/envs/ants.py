@@ -154,7 +154,7 @@ class Ants(PipelineEnv):
         healthy_z_range=(0.2, 1.0),
         contact_force_range=(-1.0, 1.0),
         reset_noise_scale=0.1,
-        exclude_current_positions_from_observation=True,
+        exclude_current_positions_from_observation=False,
         forward_reward_weight=1.0,
         chase_reward_weight=1.0,
         tag_reward_weight=0.0,
@@ -200,9 +200,16 @@ class Ants(PipelineEnv):
         self._full_state_other_agents = full_state_other_agents
 
         if full_state_other_agents:
-            self._q_dim = 27
-            self._q_vel_dim = 27
-            self._q_other = 27
+            self._x_pos = 27
+            self._x_vel = 27
+            self._q_pos = 15
+            self._q_vel = 14
+            self._other_x_pos = 27
+        else:
+            self._x_pos = 27
+            self._x_vel = 27
+            self._q_pos = 15
+            self._q_vel = 14
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -401,44 +408,53 @@ class Ants(PipelineEnv):
 
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe ant body position and velocities."""
-        # qpos = pipeline_state.q
-        qpos = pipeline_state.x.pos.ravel()
-        # qvel = pipeline_state.qd
-        qvel = pipeline_state.xd.vel.ravel()
+        qpos = pipeline_state.q
+        xpos = pipeline_state.x.pos.ravel()
+        qvel = pipeline_state.qd
+        xvel = pipeline_state.xd.vel.ravel()
+
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
                 [0, 1, 26, 27]
             )  # Removing CoM x-y for ant 1 and 2
-            qpos = qpos[
-                np.logical_not(np.isin(np.arange(len(qpos)), indices_to_remove))
+            xpos = xpos[
+                np.logical_not(np.isin(np.arange(len(xpos)), indices_to_remove))
             ]
         if self._full_state_other_agents:
             if not self._exclude_current_positions_from_observation:
-                a1_pos = qpos[0:27]
-                a2_pos = qpos[27:56]
+                a1_pos = xpos[0:27]
+                a2_pos = xpos[27:56]
                 positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-                return jp.concatenate([qpos] + [qvel] + [positions_other_agents])
+                return jp.concatenate(
+                    [xpos] + [xvel] + [qpos] + [qvel] + [positions_other_agents]
+                )
             else:
-                a1_pos = qpos[0:25]
-                a2_pos = qpos[25:52]
+                a1_pos = xpos[0:25]
+                a2_pos = xpos[25:52]
                 positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-                return jp.concatenate([qpos] + [qvel] + [positions_other_agents])
-        return jp.concatenate([qpos] + [qvel])
+                return jp.concatenate(
+                    [xpos] + [xvel] + [qpos] + [qvel] + [positions_other_agents]
+                )
+        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel])
 
     @property
     def dims(self):
         action_dim = int(self.sys.act_size() // self.num_agents)
         if self._full_state_other_agents:
             return (
-                self._q_dim,
-                self._q_vel_dim,
-                self._q_other,
+                self._x_pos,
+                self._x_vel,
+                self._q_pos,
+                self._q_vel,
+                self._other_x_pos,
                 action_dim,
             )
         else:
             return (
-                self._q_dim,
-                self._q_vel_dim,
+                self._x_pos,
+                self._x_vel,
+                self._q_pos,
+                self._q_vel,
                 action_dim,
             )
 

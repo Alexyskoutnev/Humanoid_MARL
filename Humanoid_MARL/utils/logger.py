@@ -69,8 +69,33 @@ class WandbLogger:
             }
         )
 
-    def log_epoch_loss(self, epoch_loss: float) -> None:
-        wandb.log({"losses/epoch_loss": epoch_loss})
+    def log_epoch_loss(
+        self, agent_idx: int, loss_dict: Dict[str, float], epoch_num: int = 1
+    ) -> None:
+        wandb.log(
+            {
+                f"losses/total_loss_a{str(agent_idx)}": loss_dict["total_loss"]
+                / epoch_num
+            }
+        )
+        wandb.log(
+            {
+                f"losses/policy_loss_a{str(agent_idx)}": loss_dict["policy_loss"]
+                / epoch_num
+            }
+        )
+        wandb.log(
+            {
+                f"losses/value_loss_a{str(agent_idx)}": loss_dict["value_loss"]
+                / epoch_num
+            }
+        )
+        wandb.log(
+            {
+                f"losses/entropy_loss_a{str(agent_idx)}": loss_dict["entropy_loss"]
+                / epoch_num
+            }
+        )
 
     def log_network_loss(
         self, critic_loss: float, actor_loss: float, entropy_loss: float

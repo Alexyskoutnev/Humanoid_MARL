@@ -33,6 +33,12 @@ class Agent(nn.Module):
         self.num_steps = torch.zeros((), device=device)
         self.running_mean = torch.zeros(policy_layers[0], device=device)
         self.running_variance = torch.zeros(policy_layers[0], device=device)
+        self.loss_dict = {
+            "policy_loss": 0.0,
+            "value_loss": 0.0,
+            "entropy_loss": 0.0,
+            "total_loss": 0.0,
+        }
 
         self.entropy_cost = entropy_cost
         self.discounting = discounting
@@ -40,6 +46,14 @@ class Agent(nn.Module):
         self.lambda_ = 0.95
         self.epsilon = 0.2
         self.device = device
+
+    def _reset_loss(self):
+        self.loss_dict = {
+            "policy_loss": 0.0,
+            "value_loss": 0.0,
+            "entropy_loss": 0.0,
+            "total_loss": 0.0,
+        }
 
     @torch.jit.export
     def dist_create(self, logits: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -162,6 +176,7 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
+        self._reset_loss()  # reset the loss values in the loss dictionary
         td_obs = td["observation"][
             :, :, agent_idx, :
         ]  # [unroll_length, batch_size, obs_dim]
@@ -231,5 +246,11 @@ class Agent(nn.Module):
         entropy = torch.mean(self.dist_entropy(loc, scale))
         entropy_loss = self.entropy_cost * -entropy
 
+        self.loss_dict["policy_loss"] = policy_loss.item()
+        self.loss_dict["value_loss"] = v_loss.item()
+        self.loss_dict["entropy_loss"] = entropy_loss.item()
+        self.loss_dict["total_loss"] = (
+            policy_loss.item() + v_loss.item() + entropy_loss.item()
+        )
+
         return policy_loss + v_loss + entropy_loss
-        # return policy_loss + v_loss

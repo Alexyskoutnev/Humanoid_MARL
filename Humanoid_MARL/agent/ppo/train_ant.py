@@ -120,7 +120,6 @@ def eval_unroll(
     length: int = 1000,
     device: str = "cpu",
     get_jax_state: bool = False,
-    get_full_state: bool = False,
     agent_config: Dict[str, Any] = {},
 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
@@ -222,7 +221,6 @@ def train_unroll(
     unroll_length,
     debug=False,
     logger=None,
-    get_full_state=False,
     agent_config={},
 ):
     """Return step data over multple unrolls."""
@@ -231,9 +229,7 @@ def train_unroll(
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
             logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
-            observation, reward, done, info = _nan_filter(
-                env.step(Agent.dist_postprocess(action))
-            )
+            observation, reward, done, info = env.step(Agent.dist_postprocess(action))
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
             one_unroll.action.append(action)
@@ -288,7 +284,6 @@ def reshape_minibatch(
     minibatch_idx: int,
     dims: Tuple[int],
     num_agents: int = 2,
-    get_full_state: bool = False,
 ) -> torch.Tensor:
     """
     Reshape and index into a minibatch of trajectories.
@@ -372,7 +367,6 @@ def setup_env(
     episode_length: int,
     device_idx: int,
     env_config: Dict,
-    full_state: bool,
     device="cuda",
     time_series: bool = False,
 ) -> Env:
@@ -383,7 +377,7 @@ def setup_env(
         device_idx=device_idx,
         **env_config,
     )
-    env = VectorGymWrapper(env, full_state=full_state)
+    env = VectorGymWrapper(env)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
     if time_series:
@@ -472,7 +466,6 @@ def train(
     env_config: Dict[str, Any] = {},
     eval_flag: bool = True,
     runnning_avg_length: int = 3,
-    full_state: bool = False,  # Enable every agent see eac
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
     agent_config: Dict[str, Any] = {},
     network_config: Dict[str, Any] = {},
@@ -486,7 +479,6 @@ def train(
         episode_length,
         device_idx,
         env_config,
-        full_state,
         device=device,
         time_series=time_series,
     )
@@ -527,7 +519,6 @@ def train(
                     env,
                     episode_length,
                     device,
-                    get_full_state=full_state,
                     agent_config=agent_config,
                 )
             duration = time.time() - t
@@ -587,7 +578,6 @@ def train(
                 unroll_length,
                 debug=debug,
                 logger=logger,
-                get_full_state=full_state,
                 agent_config=agent_config,
             )
 
@@ -599,9 +589,6 @@ def train(
                 env.obs_dims_tuple,
             )
             for update_epoch in range(num_update_epochs):
-                epoch_loss = 0.0
-                # shuffle and batch the data
-                # print(f"update_epoch {update_epoch}")
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
 
@@ -612,21 +599,16 @@ def train(
                         )
                         return data.swapaxes(0, 1)
 
-                    epoch_td = sd_map(shuffle_batch, td)  # -> [32, 3, 256, 554]
-                # print(f"shuffle time: {time.time() - time_shuffle}")
+                    epoch_td = sd_map(shuffle_batch, td)
 
                 for minibatch_i in range(num_minibatches):
-                    # print(f"minibatch_i {minibatch_i}")
-                    # time_batch = time.time()
                     td_minibatch = sd_map_minibatch(
                         reshape_minibatch,
                         epoch_td,
                         minibatch_idx=minibatch_i,
                         dims=env.obs_dims_tuple,
                         num_agents=env.num_agents,
-                        get_full_state=full_state,
-                    )  # -> [3, 256, 2, 277]
-                    # print(f"batch time: {time.time() - time_batch}")
+                    )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         if agent_config.get("freeze_idx") == idx:
                             continue
@@ -635,13 +617,9 @@ def train(
                         loss.backward()
                         optimizer.step()
                         total_loss += loss
-                        epoch_loss += loss
-                        # print(f"loss time: {time.time() - time_loss}")
-                # print(f"total time: {time.time() - total_time}")
-
                 if not debug:
-                    logger.log_epoch_loss(epoch_loss / num_epoch + 1)
-                    # print(f"epoch {num_epoch} : [{epoch_loss}]")
+                    for idx, agent in enumerate(agents):
+                        logger.log_epoch_loss(idx, agent.loss_dict, num_epoch + 1)
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
