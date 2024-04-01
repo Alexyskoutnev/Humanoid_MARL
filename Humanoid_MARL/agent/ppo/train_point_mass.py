@@ -26,6 +26,7 @@ from brax.envs.base import Env
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
+from Humanoid_MARL.utils.utils import get_grad_info
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
 from Humanoid_MARL.agent.ppo.agent_lstm import AgentLSTM
@@ -71,7 +72,6 @@ def eval_unroll(
     length: int = 1000,
     device: str = "cpu",
     get_jax_state: bool = False,
-    get_full_state: bool = False,
     agent_config: Dict[str, Any] = {},
 ) -> Union[torch.Tensor, float]:
     """Return number of episodes and average reward for a single unroll."""
@@ -136,7 +136,6 @@ def train_unroll(
     unroll_length,
     debug=False,
     logger=None,
-    get_full_state=False,
     agent_config={},
 ):
     """Return step data over multple unrolls."""
@@ -183,7 +182,6 @@ def reshape_minibatch(
     minibatch_idx: int,
     dims: Tuple[int],
     num_agents: int = 2,
-    get_full_state: bool = False,
 ) -> torch.Tensor:
     """
     Reshape and index into a minibatch of trajectories.
@@ -221,7 +219,6 @@ def setup_env(
     episode_length: int,
     device_idx: int,
     env_config: Dict,
-    full_state: bool,
     device="cuda",
     time_series: bool = False,
 ) -> Env:
@@ -232,7 +229,7 @@ def setup_env(
         device_idx=device_idx,
         **env_config,
     )
-    env = VectorGymWrapper(env, full_state=full_state)
+    env = VectorGymWrapper(env)
     # automatically convert between jax ndarrays and torch tensors:
     env = torch_wrapper.TorchWrapper(env, device=device)
     if time_series:
@@ -321,7 +318,6 @@ def train(
     env_config: Dict[str, Any] = {},
     eval_flag: bool = True,
     runnning_avg_length: int = 3,
-    full_state: bool = False,  # TODO : Remove this
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
     agent_config: Dict[str, Any] = {},
     network_config: Dict[str, Any] = {},
@@ -335,7 +331,6 @@ def train(
         episode_length,
         device_idx,
         env_config,
-        full_state,
         device=device,
         time_series=time_series,
     )
@@ -376,7 +371,6 @@ def train(
                     env,
                     episode_length,
                     device,
-                    get_full_state=full_state,
                     agent_config=agent_config,
                 )
             duration = time.time() - t
@@ -436,7 +430,6 @@ def train(
                 unroll_length,
                 debug=debug,
                 logger=logger,
-                get_full_state=full_state,
                 agent_config=agent_config,
             )
 
@@ -469,7 +462,6 @@ def train(
                         minibatch_idx=minibatch_i,
                         dims=env.obs_dims_tuple,
                         num_agents=env.num_agents,
-                        get_full_state=full_state,
                     )  # -> [3, 256, 2, 277]
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
                         if agent_config.get("freeze_idx") == idx:
@@ -482,7 +474,9 @@ def train(
                         epoch_loss += loss
 
                 if not debug:
-                    logger.log_epoch_loss(epoch_loss / num_epoch + 1)
+                    for idx, agent in enumerate(agents):
+                        logger.log_epoch_loss(idx, agent.loss_dict, num_epoch + 1)
+                        logger.log_gradient_info(idx, get_grad_info(agent))
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps
