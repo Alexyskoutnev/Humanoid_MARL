@@ -26,6 +26,7 @@ from brax.envs.base import Env
 from Humanoid_MARL import envs
 from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 from Humanoid_MARL.utils.torch_utils import save_models, load_models
+from Humanoid_MARL.utils.utils import get_grad_info
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.agent.ppo.agent import Agent
 from Humanoid_MARL.agent.ppo.agent_lstm import AgentLSTM
@@ -617,9 +618,11 @@ def train(
                         loss.backward()
                         optimizer.step()
                         total_loss += loss
+
                 if not debug:
                     for idx, agent in enumerate(agents):
                         logger.log_epoch_loss(idx, agent.loss_dict, num_epoch + 1)
+                        logger.log_gradient_info(idx, get_grad_info(agent))
 
         duration = time.time() - t
         total_steps += num_epochs * num_steps

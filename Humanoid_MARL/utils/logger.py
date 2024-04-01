@@ -110,3 +110,9 @@ class WandbLogger:
 
     def log_running_mean(self, running_mean: float) -> None:
         wandb.log({"eval/running_mean": running_mean})
+
+    def log_gradient_info(
+        self, agent_idx: int, gradient_info: Dict[str, float]
+    ) -> None:
+        for key, value in gradient_info.items():
+            wandb.log({f"gradients/{key}_a{str(agent_idx)}": value})

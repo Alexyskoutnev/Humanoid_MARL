@@ -6,6 +6,40 @@ import os
 import torch
 import yaml
 from Humanoid_MARL import *
+from Humanoid_MARL.agent.ppo.agent import Agent
+
+
+def get_grad_info(agent: Agent) -> Dict[str, float]:
+    gradient_list_policy = []
+    gradient_list_value = []
+    for param in agent.policy.parameters():
+        if param.grad is not None:
+            gradient_list_policy.append(param.grad.cpu().detach().numpy())
+    for param in agent.value.parameters():
+        if param.grad is not None:
+            gradient_list_value.append(param.grad.cpu().detach().numpy())
+
+    _policy_gradients = np.concatenate(
+        [gradient.flatten() for gradient in gradient_list_policy]
+    )
+    mean_gradient_policy = float(np.mean(_policy_gradients))
+    std_gradient_policy = float(np.std(_policy_gradients))
+    max_gradient_policy = float(np.max(_policy_gradients))
+    _value_gradients = np.concatenate(
+        [gradient.flatten() for gradient in gradient_list_value]
+    )
+    mean_gradient_value = float(np.mean(_value_gradients))
+    std_gradient_value = float(np.std(_value_gradients))
+    max_gradient_value = float(np.max(_value_gradients))
+
+    return {
+        "mean_policy": mean_gradient_policy,
+        "std_policy": std_gradient_policy,
+        "max_policy": max_gradient_policy,
+        "mean_value": mean_gradient_value,
+        "std_value": std_gradient_value,
+        "max_value": max_gradient_value,
+    }
 
 
 def _debug_config(config: Dict) -> Dict:

@@ -67,13 +67,6 @@ class Agent(nn.Module):
     def dist_sample_no_postprocess(
         self, loc: torch.Tensor, scale: torch.Tensor
     ) -> torch.Tensor:
-
-        # if torch.isnan(
-        #     scale
-        # ).any():  # TODO: Resolve this issue why the Brax simulator is returning NaN values?
-        #     nan_indices = torch.isnan(scale)
-        #     # print("Warning: NaN values detected in scale at indices:", nan_indices)
-        #     scale[nan_indices] = 0.001
         return torch.normal(loc, scale)
 
     @classmethod
@@ -82,11 +75,6 @@ class Agent(nn.Module):
 
     @torch.jit.export
     def dist_entropy(self, loc: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
-        # if torch.isnan(
-        #     scale
-        # ).any():  # TODO : Resolve this issue why the Brax simulator is returning NaN values?
-        #     nan_indices = torch.isnan(scale).squeeze()
-        #     scale[nan_indices] = 0.001
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(scale)
         entropy = 0.5 + log_normalized
         entropy = entropy * torch.ones_like(loc)
@@ -177,6 +165,7 @@ class Agent(nn.Module):
     @torch.jit.export
     def loss(self, td: Dict[str, torch.Tensor], agent_idx: int):
         self._reset_loss()  # reset the loss values in the loss dictionary
+
         td_obs = td["observation"][
             :, :, agent_idx, :
         ]  # [unroll_length, batch_size, obs_dim]
@@ -254,3 +243,4 @@ class Agent(nn.Module):
         )
 
         return policy_loss + v_loss + entropy_loss
+        # return policy_loss + v_loss
