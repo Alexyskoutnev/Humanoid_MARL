@@ -24,7 +24,8 @@ def cmd_args():
         "-e",
         "--env_name",
         type=str,
-        default="point_mass",
+        # default="point_mass",
+        default="ants",
         help="environment name",
     )
     args = parser.parse_args()

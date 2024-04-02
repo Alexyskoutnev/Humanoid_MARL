@@ -6,7 +6,7 @@ unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 4
 discounting: 0.97
-learning_rate: 0.0003
+learning_rate: 0.001
 entropy_cost: 0.02
 num_envs: 2048
 batch_size: 1024
