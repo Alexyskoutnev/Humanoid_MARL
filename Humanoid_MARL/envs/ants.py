@@ -160,6 +160,7 @@ class Ants(PipelineEnv):
         tag_reward_weight=0.0,
         chase_reward_inverse=True,
         full_state_other_agents=False,
+        random_spawn=False,
         backend="positional",
         **kwargs,
     ):
@@ -198,6 +199,7 @@ class Ants(PipelineEnv):
         self._or_done_flag = False
         self._and_done_flag = True
         self._full_state_other_agents = full_state_other_agents
+        self._random_spawn = random_spawn
 
         if full_state_other_agents:
             self._x_pos = 27
@@ -219,9 +221,34 @@ class Ants(PipelineEnv):
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
-        q = self.sys.init_q + jax.random.uniform(
-            rng1, (self.sys.q_size(),), minval=low, maxval=hi
-        )
+        if self._random_spawn:
+            rng1, rng2 = jax.random.split(rng1)
+            pos_low = -2.0
+            pos_hi = 2.0
+            q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a1 = q_init_a1.at[0].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a1 = q_init_a1.at[1].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a2 = q_init_a2.at[9].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a2 = q_init_a2.at[10].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q = (
+                self.sys.init_q
+                + jax.random.uniform(rng1, (self.sys.q_size(),), minval=low, maxval=hi)
+                + q_init_a1
+                + q_init_a2
+            )
+        else:
+            q = self.sys.init_q + jax.random.uniform(
+                rng1, (self.sys.q_size(),), minval=low, maxval=hi
+            )
         qd = hi * jax.random.normal(rng2, (self.sys.qd_size(),))
 
         pipeline_state = self.pipeline_init(q, qd)
