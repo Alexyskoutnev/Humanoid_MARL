@@ -3,7 +3,14 @@
 import functools
 from typing import Optional, Type
 
-from Humanoid_MARL.envs import humanoids, humanoid, humanoids_wall, ants, point_mass_env
+from Humanoid_MARL.envs import (
+    humanoids,
+    humanoid,
+    humanoids_wall,
+    ants,
+    point_mass_env,
+    linked_balls,
+)
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
 from Humanoid_MARL.envs.wrappers import VmapWrapper, EpisodeWrapper
@@ -18,6 +25,7 @@ _envs = {
     "ants": ants.Ants,
     "ants_debug": ants.Ants,
     "point_mass": point_mass_env.Point_Mass,
+    "linked_balls": linked_balls.Linked_Balls,
 }
 
 

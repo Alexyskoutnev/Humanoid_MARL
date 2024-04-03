@@ -1,0 +1,10 @@
+MLP : true
+LSTM : false
+TRANSFORMER : false
+
+POLICY_LAYERS : [18, 64, 64, 8]
+
+VALUE_LAYERS : [18, 64, 64, 1]
+
+HIDDEN_SIZE : 64
+NUM_LAYERS : 1

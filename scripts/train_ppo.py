@@ -9,6 +9,7 @@ from typing import Dict
 from Humanoid_MARL.agent.ppo.train_torch import train as train_humanoid
 from Humanoid_MARL.agent.ppo.train_lstm import train as train_lstm
 from Humanoid_MARL.agent.ppo.train_ant import train as train_ant
+from Humanoid_MARL.agent.ppo.linked_ball_train import train as train_linked_ball
 from Humanoid_MARL.agent.ppo.train_point_mass import train as train_point_mass
 from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import load_config
@@ -25,7 +26,8 @@ def cmd_args():
         "--env_name",
         type=str,
         # default="point_mass",
-        default="ants",
+        # default="ants",
+        default="linked_balls",
         help="environment name",
     )
     args = parser.parse_args()
@@ -75,6 +77,13 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
+        elif config["train_config"]["env_name"] == "linked_balls":
+            train_linked_ball(
+                **config["train_config"],
+                env_config=config["env_config"],
+                network_config=config["network_config"],
+                agent_config=config["agent_config"],
+            )
 
     else:
         if (
@@ -96,6 +105,13 @@ def main(args):
             )
         elif config["train_config"]["env_name"] == "point_mass":
             train_point_mass(
+                **config["train_config"],
+                env_config=config["env_config"],
+                network_config=config["network_config"],
+                agent_config=config["agent_config"],
+            )
+        elif config["train_config"]["env_name"] == "linked_balls":
+            train_linked_ball(
                 **config["train_config"],
                 env_config=config["env_config"],
                 network_config=config["network_config"],

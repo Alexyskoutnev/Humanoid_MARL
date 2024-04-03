@@ -1,0 +1,9 @@
+exclude_current_positions_from_observation: false
+ctrl_cost_weight: 0.0
+chase_reward_weight : 1.0
+forward_reward_weight: 0.0
+reset_noise_scale: 0.0
+chase_reward_inverse : false
+full_state_other_agents : false
+tag_reward_weight : 0.0
+backend : "positional"

@@ -1,4 +1,4 @@
-terminate_when_unhealthy: true
+terminate_when_unhealthy: false
 exclude_current_positions_from_observation: false # Change this to true
 use_contact_forces: false
 contact_cost_weight: 0.0000
