@@ -273,7 +273,7 @@ class Simple_Robot(PipelineEnv):
             y_velocity=velocity_y,
             reward_chase=chase_reward,
             reward_tag=tag_reward,
-            control_cost=ctrl_cost,
+            control_cost=-ctrl_cost,
             z_position=z_pos,
             healthy_reward=healthy_reward,
         )

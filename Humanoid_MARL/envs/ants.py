@@ -204,14 +204,14 @@ class Ants(PipelineEnv):
         if full_state_other_agents:
             self._x_pos = 27
             self._x_vel = 27
-            self._q_pos = 15
-            self._q_vel = 14
+            # self._q_pos = 15
+            # self._q_vel = 14
             self._other_x_pos = 27
         else:
             self._x_pos = 27
             self._x_vel = 27
-            self._q_pos = 15
-            self._q_vel = 14
+            # self._q_pos = 15
+            # self._q_vel = 14
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -256,20 +256,21 @@ class Ants(PipelineEnv):
 
         _, done, zero = jp.zeros(3)
         reward = jp.zeros(2)
-        zero_init = jp.zeros(2)
+        dummy_val = jp.zeros(2)
 
         metrics = {
-            "reward_forward": zero_init,
-            "reward_survive": zero_init,
-            "reward_ctrl": zero_init,
-            "x_position": zero_init,
-            "y_position": zero_init,
-            "distance_from_origin": zero_init,
-            "x_velocity": zero_init,
-            "y_velocity": zero_init,
-            "forward_reward": zero_init,
-            "reward_chase": zero_init,
-            "reward_tag": zero_init,
+            "reward_forward": dummy_val,
+            "reward_survive": dummy_val,
+            "reward_ctrl": dummy_val,
+            "x_position": dummy_val,
+            "y_position": dummy_val,
+            "distance_from_origin": dummy_val,
+            "x_velocity": dummy_val,
+            "y_velocity": dummy_val,
+            "forward_reward": dummy_val,
+            "reward_chase": dummy_val,
+            "reward_tag": dummy_val,
+            "z_position": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -296,9 +297,15 @@ class Ants(PipelineEnv):
 
     def _chase_reward_fn(self, pipeline_state):
         _dist_diff = jp.sqrt(
-            (jp.abs(pipeline_state.x.pos[0, 0]) - jp.abs(pipeline_state.x.pos[9, 0]))
+            (
+                jp.abs(pipeline_state.x.pos[0, 0])
+                - jp.abs(pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0])
+            )
             ** 2
-            + (jp.abs(pipeline_state.x.pos[0, 1]) - jp.abs(pipeline_state.x.pos[9, 1]))
+            + (
+                jp.abs(pipeline_state.x.pos[0, 1])
+                - jp.abs(pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1])
+            )
             ** 2
         )
         if self._chase_reward_inverse:
@@ -314,13 +321,17 @@ class Ants(PipelineEnv):
             pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
         ) / self.dt
         delta_x_a_2 = (
-            pipeline_state.x.pos[9][0] - pipeline_state0.x.pos[9][0]
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0]
+            - pipeline_state0.x.pos[pipeline_state.x.pos.shape[0] // 2][0]
         ) / self.dt
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
         delta_y_a_1 = pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]
-        delta_y_a_2 = pipeline_state.x.pos[9][1] - pipeline_state0.x.pos[9][1]
+        delta_y_a_2 = (
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][1]
+            - pipeline_state0.x.pos[pipeline_state.x.pos.shape[0] // 2][1]
+        )
         return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
@@ -360,8 +371,8 @@ class Ants(PipelineEnv):
         )
         com_a_2 = jp.concatenate(
             [
-                pipeline_state.x.pos[9, 0].reshape(-1),
-                pipeline_state.x.pos[9, 1].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1].reshape(-1),
             ]
         )
         norm_origin_distance_a_1 = jp.linalg.norm(com_a_1).reshape(-1)
@@ -392,11 +403,9 @@ class Ants(PipelineEnv):
             )
 
         tag_reward = self._tag_reward(pipeline_state)
-
         ctrl_cost = self._control_reward(action)
         contact_cost = 0.0  # TODO: Implement contact cost
         chase_reward = self._chase_reward_fn(pipeline_state)
-
         obs = self._get_obs(pipeline_state)
         reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
@@ -404,13 +413,19 @@ class Ants(PipelineEnv):
         x_pos = jp.concatenate(
             [
                 pipeline_state.x.pos[0, 0].reshape(-1),
-                pipeline_state.x.pos[9, 0].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0].reshape(-1),
             ]
         )
         y_pos = jp.concatenate(
             [
                 pipeline_state.x.pos[0, 1].reshape(-1),
-                pipeline_state.x.pos[9, 1].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1].reshape(-1),
+            ]
+        )
+        z_pos = jp.concatenate(
+            [
+                pipeline_state.q[2].reshape(-1),
+                pipeline_state.q[pipeline_state.q.shape[0] // 2 + 2].reshape(-1),
             ]
         )
 
@@ -427,6 +442,7 @@ class Ants(PipelineEnv):
             y_velocity=velocity_y,
             reward_chase=chase_reward,
             reward_tag=tag_reward,
+            z_position=z_pos,
         )
 
         return state.replace(
@@ -435,9 +451,9 @@ class Ants(PipelineEnv):
 
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe ant body position and velocities."""
-        qpos = pipeline_state.q
+        # qpos = pipeline_state.q
         xpos = pipeline_state.x.pos.ravel()
-        qvel = pipeline_state.qd
+        # qvel = pipeline_state.qd
         xvel = pipeline_state.xd.vel.ravel()
 
         if self._exclude_current_positions_from_observation:
@@ -448,21 +464,20 @@ class Ants(PipelineEnv):
                 np.logical_not(np.isin(np.arange(len(xpos)), indices_to_remove))
             ]
         if self._full_state_other_agents:
-            if not self._exclude_current_positions_from_observation:
-                a1_pos = xpos[0:27]
-                a2_pos = xpos[27:56]
-                positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-                return jp.concatenate(
-                    [xpos] + [xvel] + [qpos] + [qvel] + [positions_other_agents]
-                )
+            if self._exclude_current_positions_from_observation:
+                raise NotImplementedError("Full state other agents not implemented.")
+                # a1_pos = xpos[0:27]
+                # a2_pos = xpos[27:56]
+                # positions_other_agents = jp.concatenate([a2_pos, a1_pos])
+                # return jp.concatenate(
+                #     [xpos] + [xvel] + [positions_other_agents]
+                # )
             else:
-                a1_pos = xpos[0:25]
-                a2_pos = xpos[25:52]
+                a1_pos = xpos[0 : pipeline_state.x.pos.shape[0] // 2 * 3]
+                a2_pos = xpos[pipeline_state.x.pos.shape[0] // 2 * 3 :]
                 positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-                return jp.concatenate(
-                    [xpos] + [xvel] + [qpos] + [qvel] + [positions_other_agents]
-                )
-        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel])
+                return jp.concatenate([xpos] + [xvel] + [positions_other_agents])
+        return jp.concatenate([xpos] + [xvel])
 
     @property
     def dims(self):
@@ -471,8 +486,8 @@ class Ants(PipelineEnv):
             return (
                 self._x_pos,
                 self._x_vel,
-                self._q_pos,
-                self._q_vel,
+                # self._q_pos,
+                # self._q_vel,
                 self._other_x_pos,
                 action_dim,
             )
@@ -480,8 +495,8 @@ class Ants(PipelineEnv):
             return (
                 self._x_pos,
                 self._x_vel,
-                self._q_pos,
-                self._q_vel,
+                # self._q_pos,
+                # self._q_vel,
                 action_dim,
             )
 

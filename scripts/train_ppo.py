@@ -27,9 +27,9 @@ def cmd_args():
         "--env_name",
         type=str,
         # default="point_mass",
-        # default="ants",
+        default="ants",
         # default="linked_balls",
-        default="simple_robots",
+        # default="simple_robots",
         help="environment name",
     )
     args = parser.parse_args()
