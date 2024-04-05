@@ -42,6 +42,7 @@ class Simple_Robot(PipelineEnv):
         tag_reward_weight=0.0,
         chase_reward_inverse=True,
         full_state_other_agents=False,
+        healthy_z_range=(0.2, 1.0),
         reward_scaling=1.0,
         backend="positional",
         **kwargs,
@@ -105,6 +106,7 @@ class Simple_Robot(PipelineEnv):
             "y_velocity": dummy_val,
             "reward_chase": dummy_val,
             "reward_tag": dummy_val,
+            "control_cost": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -159,7 +161,12 @@ class Simple_Robot(PipelineEnv):
         return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
-        raise NotImplementedError("Control reward not implemented.")
+        action = reshape_vector(
+            action,
+            (self.num_agents, action.shape[0] // self.num_agents),
+        )
+        ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
+        return ctrl_cost
 
     def _norm(self, pipeline_state: base.State):
         com_a_1 = jp.concatenate(
@@ -192,11 +199,11 @@ class Simple_Robot(PipelineEnv):
         forward_reward = velocity * self._forward_reward_weight
         tag_reward = self._tag_reward(pipeline_state)
 
-        # ctrl_cost = self._control_reward(action)
+        ctrl_cost = self._control_reward(action)
         chase_reward = self._chase_reward_fn(pipeline_state)
         obs = self._get_obs(pipeline_state)
         # reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
-        reward = forward_reward + chase_reward + tag_reward
+        reward = forward_reward + chase_reward + tag_reward - ctrl_cost
         # done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
         done = 0.0
 
@@ -224,6 +231,7 @@ class Simple_Robot(PipelineEnv):
             y_velocity=velocity_y,
             reward_chase=chase_reward,
             reward_tag=tag_reward,
+            control_cost=ctrl_cost,
         )
 
         return state.replace(

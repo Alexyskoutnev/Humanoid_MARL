@@ -1,7 +1,7 @@
 num_timesteps: 500_000_000
 eval_reward_limit: 10_000
 eval_frequency: 100
-episode_length: 500
+episode_length: 1000
 unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 4
