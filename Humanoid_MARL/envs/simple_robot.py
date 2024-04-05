@@ -31,12 +31,12 @@ import functools as ft
 # config.update("jax_disable_jit", True)
 
 
-class Linked_Balls(PipelineEnv):
+class Simple_Robot(PipelineEnv):
     def __init__(
         self,
         ctrl_cost_weight=0.5,
         reset_noise_scale=0.1,
-        exclude_current_positions_from_observation=True,
+        exclude_current_positions_from_observation=False,
         forward_reward_weight=1.0,
         chase_reward_weight=1.0,
         tag_reward_weight=0.0,
@@ -47,9 +47,8 @@ class Linked_Balls(PipelineEnv):
         **kwargs,
     ):
 
-        linked_ball_path = os.path.join(PACKAGE_ROOT, "assets", "linked_balls_2.xml")
-        # linked_ball_path_walls = os.path.join(PACKAGE_ROOT, "assets", "linked_balls_2_walls.xml")
-        sys = mjcf.load(linked_ball_path)
+        simple_robot_path = os.path.join(PACKAGE_ROOT, "assets", "simple_robot_2.xml")
+        sys = mjcf.load(simple_robot_path)
 
         n_frames = 5
 
@@ -60,8 +59,8 @@ class Linked_Balls(PipelineEnv):
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
 
         super().__init__(sys=sys, backend=backend, **kwargs)
-        self._q_dim = 6
-        self._q_vel_dim = 6
+        self._q_dim = 15
+        self._q_vel_dim = 15
         self.num_agents = 2
 
         self._ctrl_cost_weight = ctrl_cost_weight
@@ -77,9 +76,9 @@ class Linked_Balls(PipelineEnv):
         self._full_state_other_agents = full_state_other_agents
 
         if full_state_other_agents:
-            self._q_dim = 6
-            self._q_vel_dim = 6
-            self._q_other = 6
+            self._q_dim = 15
+            self._q_vel_dim = 15
+            self._q_other = 15
 
     def reset(self, rng: jax.Array) -> State:
         """Resets the environment to an initial state."""
@@ -122,8 +121,16 @@ class Linked_Balls(PipelineEnv):
 
     def _chase_reward_fn(self, pipeline_state):
         _dist_diff = jp.sqrt(
-            (pipeline_state.x.pos[0, 0] - pipeline_state.x.pos[2, 0]) ** 2
-            + (pipeline_state.x.pos[0, 1] - pipeline_state.x.pos[2, 1]) ** 2
+            (
+                pipeline_state.x.pos[0, 0]
+                - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+            )
+            ** 2
+            + (
+                pipeline_state.x.pos[0, 1]
+                - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+            )
+            ** 2
         )
         if self._chase_reward_inverse:
             persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
@@ -138,13 +145,17 @@ class Linked_Balls(PipelineEnv):
             pipeline_state.x.pos[0][0] - pipeline_state0.x.pos[0][0]
         ) / self.dt
         delta_x_a_2 = (
-            pipeline_state.x.pos[2][0] - pipeline_state0.x.pos[2][0]
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0]
+            - pipeline_state0.x.pos[pipeline_state.x.pos.shape[0] // 2][0]
         ) / self.dt
         return jp.concatenate([delta_x_a_1.reshape(-1), delta_x_a_2.reshape(-1)])
 
     def _get_velocity_y(self, pipeline_state: base.State, pipeline_state0: base.State):
         delta_y_a_1 = pipeline_state.x.pos[0][1] - pipeline_state0.x.pos[0][1]
-        delta_y_a_2 = pipeline_state.x.pos[2][1] - pipeline_state0.x.pos[2][1]
+        delta_y_a_2 = (
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][1]
+            - pipeline_state0.x.pos[pipeline_state.x.pos.shape[0] // 2][1]
+        )
         return jp.concatenate([delta_y_a_1.reshape(-1), delta_y_a_2.reshape(-1)])
 
     def _control_reward(self, action):
@@ -159,8 +170,8 @@ class Linked_Balls(PipelineEnv):
         )
         com_a_2 = jp.concatenate(
             [
-                pipeline_state.x.pos[2, 0].reshape(-1),
-                pipeline_state.x.pos[2, 1].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1].reshape(-1),
             ]
         )
         norm_origin_distance_a_1 = jp.linalg.norm(com_a_1).reshape(-1)
@@ -192,13 +203,13 @@ class Linked_Balls(PipelineEnv):
         x_pos = jp.concatenate(
             [
                 pipeline_state.x.pos[0, 0].reshape(-1),
-                pipeline_state.x.pos[2, 0].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0].reshape(-1),
             ]
         )
         y_pos = jp.concatenate(
             [
                 pipeline_state.x.pos[0, 1].reshape(-1),
-                pipeline_state.x.pos[2, 1].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1].reshape(-1),
             ]
         )
 

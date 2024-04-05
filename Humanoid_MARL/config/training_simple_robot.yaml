@@ -10,7 +10,7 @@ learning_rate: 0.001
 entropy_cost: 0.02
 num_envs: 2048
 batch_size: 1024
-env_name: linked_balls
+env_name: simple_robots
 device: cuda
 debug: false
 device_idx: 0

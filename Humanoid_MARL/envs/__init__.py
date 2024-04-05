@@ -9,7 +9,7 @@ from Humanoid_MARL.envs import (
     humanoids_wall,
     ants,
     point_mass_env,
-    linked_balls,
+    simple_robot,
 )
 from brax.envs.base import Env, PipelineEnv, State, Wrapper
 from brax.envs.wrappers import training
@@ -25,7 +25,8 @@ _envs = {
     "ants": ants.Ants,
     "ants_debug": ants.Ants,
     "point_mass": point_mass_env.Point_Mass,
-    "linked_balls": linked_balls.Linked_Balls,
+    "simple_robots": simple_robot.Simple_Robot,
+    # "linked_balls": simple_robot.Linked_Balls,
 }
 
 
