@@ -42,7 +42,7 @@ class Simple_Robot(PipelineEnv):
         tag_reward_weight=0.0,
         chase_reward_inverse=True,
         full_state_other_agents=False,
-        healthy_z_range=(0.2, 1.0),
+        healthy_z_range=(0.25, 1.0),
         healthy_reward_weight=1.0,
         terminate_when_unhealthy=True,
         reward_scaling=1.0,
