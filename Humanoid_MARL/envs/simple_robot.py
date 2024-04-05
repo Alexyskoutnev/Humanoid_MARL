@@ -43,6 +43,8 @@ class Simple_Robot(PipelineEnv):
         chase_reward_inverse=True,
         full_state_other_agents=False,
         healthy_z_range=(0.2, 1.0),
+        healthy_reward_weight=1.0,
+        terminate_when_unhealthy=True,
         reward_scaling=1.0,
         backend="positional",
         **kwargs,
@@ -69,12 +71,17 @@ class Simple_Robot(PipelineEnv):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
+        self._terminate_when_unhealthy = terminate_when_unhealthy
+        self._healthy_z_range = healthy_z_range
         self._forward_reward_weight = forward_reward_weight
         self._chase_reward_weight = chase_reward_weight
         self._chase_reward_inverse = chase_reward_inverse
         self._tag_reward_weight = tag_reward_weight
+        self._healthy_reward = healthy_reward_weight
         self._dims = None
         self._full_state_other_agents = full_state_other_agents
+        self._or_done_flag = False
+        self._and_done_flag = True
 
         if full_state_other_agents:
             self._q_dim = 15
@@ -107,8 +114,30 @@ class Simple_Robot(PipelineEnv):
             "reward_chase": dummy_val,
             "reward_tag": dummy_val,
             "control_cost": dummy_val,
+            "z_position": dummy_val,
+            "healthy_reward": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
+
+    def _check_is_healthy(self, pipeline_state, min_z, max_z):
+        is_healthy_1 = jp.where(pipeline_state.q[2] < min_z, 0.0, 1.0)
+        is_healthy_1 = jp.where(pipeline_state.q[2] > max_z, 0.0, is_healthy_1)
+        is_healthy_2 = jp.where(pipeline_state.q[13] < min_z, 0.0, 1.0)
+        is_healthy_2 = jp.where(pipeline_state.q[13] > max_z, 0.0, is_healthy_2)
+        is_healthy_1_test = is_healthy_1.astype(jp.int32)
+        is_healthy_2_test = is_healthy_2.astype(jp.int32)
+        done_signals = jp.concatenate(
+            [is_healthy_1_test.reshape(-1), is_healthy_2_test.reshape(-1)]
+        )
+        if self._or_done_flag:
+            env_done = (is_healthy_1_test | is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        elif self._and_done_flag:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
+        else:
+            env_done = (is_healthy_1_test & is_healthy_2_test).astype(jp.float32)
+            return done_signals, env_done
 
     def _tag_reward(self, pipeline_state, threshold=2.0):
         norm = jp.linalg.norm(self._norm(pipeline_state))
@@ -197,15 +226,22 @@ class Simple_Robot(PipelineEnv):
         velocity_x = self._get_velocity_x(pipeline_state, pipeline_state0)
         velocity_y = self._get_velocity_y(pipeline_state, pipeline_state0)
         forward_reward = velocity * self._forward_reward_weight
+        min_z, max_z = self._healthy_z_range
+        is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
+        if self._terminate_when_unhealthy:
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
+            )
+        else:
+            healthy_reward = (
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
+            )
         tag_reward = self._tag_reward(pipeline_state)
-
         ctrl_cost = self._control_reward(action)
         chase_reward = self._chase_reward_fn(pipeline_state)
         obs = self._get_obs(pipeline_state)
-        # reward = forward_reward + healthy_reward - ctrl_cost + tag_reward + chase_reward
-        reward = forward_reward + chase_reward + tag_reward - ctrl_cost
-        # done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
-        done = 0.0
+        reward = forward_reward + chase_reward + tag_reward - ctrl_cost + healthy_reward
+        done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
         x_pos = jp.concatenate(
             [
@@ -217,6 +253,12 @@ class Simple_Robot(PipelineEnv):
             [
                 pipeline_state.x.pos[0, 1].reshape(-1),
                 pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1].reshape(-1),
+            ]
+        )
+        z_pos = jp.concatenate(
+            [
+                pipeline_state.q[2].reshape(-1),
+                pipeline_state.q[pipeline_state.q.shape[0] // 2 + 2].reshape(-1),
             ]
         )
 
@@ -232,6 +274,8 @@ class Simple_Robot(PipelineEnv):
             reward_chase=chase_reward,
             reward_tag=tag_reward,
             control_cost=ctrl_cost,
+            z_position=z_pos,
+            healthy_reward=healthy_reward,
         )
 
         return state.replace(
@@ -241,7 +285,7 @@ class Simple_Robot(PipelineEnv):
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe point mass body position and velocities."""
         qpos = pipeline_state.x.pos.ravel()
-        qvel = pipeline_state.xd.vel.ravel()
+        qvel = pipeline_state.xd.vel.ravel()  # TODO : q and q_vel observation
         if self._full_state_other_agents:
             a1_pos = qpos[0 : qpos.shape[0] // 2]
             a2_pos = qpos[qpos.shape[0] // 2 :]

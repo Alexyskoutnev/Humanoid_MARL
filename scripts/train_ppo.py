@@ -86,7 +86,10 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
-        elif config["train_config"]["env_name"] == "simple_robot":
+        elif (
+            config["train_config"]["env_name"] == "simple_robots"
+            or config["train_config"]["env_name"] == "simple_robots_debug"
+        ):
             train_simple_robot(
                 **config["train_config"],
                 env_config=config["env_config"],

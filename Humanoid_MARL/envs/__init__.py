@@ -26,7 +26,7 @@ _envs = {
     "ants_debug": ants.Ants,
     "point_mass": point_mass_env.Point_Mass,
     "simple_robots": simple_robot.Simple_Robot,
-    # "linked_balls": simple_robot.Linked_Balls,
+    "simple_robots_debug": simple_robot.Simple_Robot,
 }
 
 

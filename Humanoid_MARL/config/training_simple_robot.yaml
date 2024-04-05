@@ -1,4 +1,4 @@
-num_timesteps: 500_000_000
+num_timesteps: 1_000_000_000
 eval_reward_limit: 10_000
 eval_frequency: 100
 episode_length: 1000
