@@ -19,13 +19,12 @@ from Humanoid_MARL.envs.base_env import GymWrapper, VectorGymWrapper
 import numpy as np
 
 # Debugging Flags
-from jax import config
-
+# from jax import config
 # config.update("jax_debug_nans", True) #Throw NaN if they happen
 # config.update("jax_disable_jit", True) #Disable JIT [remove this if you want speed]
 
 
-class Humanoid(PipelineEnv):
+class Humanoids(PipelineEnv):
     """
     ### Description
 
@@ -176,23 +175,21 @@ class Humanoid(PipelineEnv):
         forward_reward_weight=1.5,
         ctrl_cost_weight=0.1,
         chase_reward_weight=1.0,
-        healthy_reward=5.0,
+        healthy_reward=1.0,
         standup_cost=1.0,
         tag_reward_weight=1.0,
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
-        exclude_current_positions_from_observation=True,
+        exclude_current_positions_from_observation=False,
         include_standing_up_flag=False,
         or_done_flag=False,
         and_done_flag=True,
         chase_reward=False,
-        chase_reward_inverse=True,
-        include_other_agents_state=False,
-        include_full_state_other_agents=False,
+        chase_reward_inverse=False,
+        full_state_other_agents=True,
         tag_reward=False,
-        backend="generalized",
-        num_humanoids=2,
+        backend="positional",
         **kwargs,
     ):
         humanoid_2_path = os.path.join(
@@ -200,23 +197,60 @@ class Humanoid(PipelineEnv):
         )
         sys = mjcf.load(humanoid_2_path)
         n_frames = 5
-        self.num_humanoids = num_humanoids
         self.num_agents = 2
         self._dims = None
-        if exclude_current_positions_from_observation:
-            self._position_dim = 22
-        else:
-            self._position_dim = 24
-        if include_other_agents_state:
-            self._other_agent_obs = 2
-        elif include_full_state_other_agents:
-            self._other_full_state_ob = 33
-        self._velocity_dim = 23
+        self._x_pos = 33
+        self._x_vel = 33
+        self._q_pos = 24
+        self._q_vel = 23
+        self._other_full_x_pos = 33
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
         self._q_actuator_dim = 23
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
+
+        if backend in ["positional", "spring"]:
+            sys = sys.replace(dt=0.0015)
+            gear = jp.array(
+                [
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    350.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                    100.0,
+                ]
+            )
+            sys = sys.replace(actuator=sys.actuator.replace(gear=gear))
 
         super().__init__(sys=sys, backend=backend, **kwargs)
 
@@ -224,7 +258,7 @@ class Humanoid(PipelineEnv):
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward
         self._chase_reward_weight = chase_reward_weight
-        self._chase_invese_reward = chase_reward_inverse
+        self._chase_reward_inverse = chase_reward_inverse
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._reset_noise_scale = reset_noise_scale
@@ -235,8 +269,7 @@ class Humanoid(PipelineEnv):
         self._chase_reward = chase_reward
         self._or_done_flag = or_done_flag
         self._and_done_flag = and_done_flag
-        self._full_state_other_agents = include_full_state_other_agents
-        self._include_other_agents_state = include_other_agents_state
+        self._full_state_other_agents = full_state_other_agents
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -255,10 +288,9 @@ class Humanoid(PipelineEnv):
         obs = self._get_obs(pipeline_state, jp.zeros(self.sys.act_size()))
         done, _ = jp.zeros(2)
         zero_init = jp.zeros(2)
-        reward = jp.zeros(self.num_humanoids)
+        reward = jp.zeros(self.num_agents)
         metrics = {
             "forward_reward": zero_init,
-            "reward_linvel": zero_init,
             "reward_quadctrl": zero_init,
             "reward_alive": zero_init,
             "reward_chase": zero_init,
@@ -270,15 +302,22 @@ class Humanoid(PipelineEnv):
             "y_velocity": zero_init,
             "z_position": zero_init,
             "tag_reward": zero_init,
-            "steps": 0,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
     def _check_is_healthy(self, pipeline_state, min_z, max_z):
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] < min_z, 0.0, 1.0)
         is_healthy_1 = jp.where(pipeline_state.x.pos[0, 2] > max_z, 0.0, is_healthy_1)
-        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] < min_z, 0.0, 1.0)
-        is_healthy_2 = jp.where(pipeline_state.x.pos[11, 2] > max_z, 0.0, is_healthy_2)
+        is_healthy_2 = jp.where(
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 2] < min_z,
+            0.0,
+            1.0,
+        )
+        is_healthy_2 = jp.where(
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 2] > max_z,
+            0.0,
+            is_healthy_2,
+        )
         is_healthy_1_test = is_healthy_1.astype(jp.int32)
         is_healthy_2_test = is_healthy_2.astype(jp.int32)
         done_signals = jp.concatenate(
@@ -296,29 +335,33 @@ class Humanoid(PipelineEnv):
 
     def _stand_up_rewards(self, pipeline_state):
         uph_cost_h1 = pipeline_state.x.pos[0, 2]
-        uph_cost_h2 = pipeline_state.x.pos[11, 2]
+        uph_cost_h2 = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 2]
         return jp.concatenate([uph_cost_h1.reshape(-1), uph_cost_h2.reshape(-1)])
 
     def _control_reward(self, action):
         action = reshape_vector(
             action,
-            (self.num_humanoids, action.shape[0] // self.num_humanoids),
+            (self.num_agents, action.shape[0] // self.num_agents),
         )
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
 
     def _chase_reward_fn(self, pipeline_state):
-        h_1 = jp.sqrt(pipeline_state.x.pos[0, 0] ** 2 + pipeline_state.x.pos[0, 1] ** 2)
-        h_2 = jp.sqrt(
-            pipeline_state.x.pos[11, 0] ** 2 + pipeline_state.x.pos[11, 1] ** 2
-        )
-        _dist_diff = jp.abs(h_1 - h_2)
-        if self._chase_invese_reward:
-            persuader_reward = jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight
-            evader_reward = (
-                -(jp.exp(-_dist_diff * 1.0) * self._chase_reward_weight)
-                + self._chase_reward_weight
+        _dist_diff = jp.sqrt(
+            (
+                jp.abs(pipeline_state.x.pos[0, 0])
+                - jp.abs(pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0])
             )
+            ** 2
+            + (
+                jp.abs(pipeline_state.x.pos[0, 1])
+                - jp.abs(pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1])
+            )
+            ** 2
+        )
+        if self._chase_reward_inverse:
+            persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
+            evader_reward = -(jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight)
         else:
             persuader_reward = -_dist_diff * self._chase_reward_weight
             evader_reward = _dist_diff * self._chase_reward_weight
@@ -350,7 +393,6 @@ class Humanoid(PipelineEnv):
         forward_reward = self._forward_reward_weight * jp.sqrt(
             velocity[:, 0] ** 2 + velocity[:, 1] ** 2
         )
-        chase_reward = jp.zeros(2)
 
         if self._standup_reward:
             uph_cost = self._stand_up_rewards(pipeline_state) * self._standup_cost
@@ -361,11 +403,11 @@ class Humanoid(PipelineEnv):
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
         if self._terminate_when_unhealthy:
             healthy_reward = (
-                self._healthy_reward * jp.ones(self.num_humanoids) * is_healthy
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
             )
         else:
             healthy_reward = (
-                self._healthy_reward * jp.ones(self.num_humanoids) * is_healthy
+                self._healthy_reward * jp.ones(self.num_agents) * is_healthy
             )
         if self._chase_reward:
             chase_reward = self._chase_reward_fn(pipeline_state)
@@ -397,13 +439,12 @@ class Humanoid(PipelineEnv):
         humanoids_z = jp.concatenate(
             [
                 pipeline_state.x.pos[0, 2].reshape(-1),
-                pipeline_state.x.pos[11, 2].reshape(-1),
+                pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 2].reshape(-1),
             ]
         )
 
         state.metrics.update(
             forward_reward=forward_reward,
-            reward_linvel=forward_reward,
             reward_quadctrl=-ctrl_cost,
             reward_alive=healthy_reward,
             reward_chase=chase_reward,
@@ -415,7 +456,6 @@ class Humanoid(PipelineEnv):
             z_position=humanoids_z,
             standup_reward=uph_cost,
             tag_reward=tag_reward,
-            steps=state.info["steps"],
         )
 
         return state.replace(
@@ -427,8 +467,10 @@ class Humanoid(PipelineEnv):
 
     def _get_obs(self, pipeline_state: base.State, action: jax.Array) -> jax.Array:
         """Observes humanoid body position, velocities, and angles."""
-        position = pipeline_state.q
-        velocity = pipeline_state.qd
+        qpos = pipeline_state.q
+        qvel = pipeline_state.qd
+        xpos = pipeline_state.x.pos.ravel()
+        xvel = pipeline_state.xd.vel.ravel()
 
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
@@ -439,27 +481,19 @@ class Humanoid(PipelineEnv):
             ]
 
         com, inertia, mass_sum, x_i = self._com(pipeline_state)
+        com = reshape_vector(com, (self.num_agents, 1, -1))
+        x_i_pos = reshape_vector(x_i.pos, (self.num_agents, -1, 3))
+        pos_replace = reshape_vector(self._flatten(x_i_pos - com), (-1, 3))
+        cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
+        mass_sum = self._flatten(
+            mass_sum[0]
+        )  # double check that mass_sum arent different btw the two robots
 
-        if self.num_humanoids == 1:
-            com, inertia, mass_sum, x_i = self._com(pipeline_state)
-            cinr = x_i.replace(pos=x_i.pos - com).vmap().do(inertia)
-        elif self.num_humanoids > 1:
-            com = reshape_vector(com, (self.num_humanoids, 1, -1))
-            x_i_pos = reshape_vector(x_i.pos, (self.num_humanoids, -1, 3))
-            pos_replace = reshape_vector(self._flatten(x_i_pos - com), (-1, 3))
-            cinr = x_i.replace(pos=pos_replace).vmap().do(inertia)
-            mass_sum = self._flatten(
-                mass_sum[0]
-            )  # double check that mass_sum arent different btw the two robots
-            if self._include_other_agents_state:
-                position_other_agent = position[np.array([24, 25, 0, 1])]
-                position_other_agent = reshape_vector(position_other_agent, (-1, 2))
-                position_other_agent = jp.flip(position_other_agent, axis=0).ravel()
-            elif self._full_state_other_agents:
-                postitions = pipeline_state.x.pos
-                h1_pos = postitions[0:11].ravel()
-                h2_pos = postitions[11:22].ravel()
-                position_other_agent = jp.concatenate([h2_pos, h1_pos])
+        if self._full_state_other_agents:
+            postitions = pipeline_state.x.pos
+            h1_pos = postitions[0 : pipeline_state.x.pos.shape[0] // 2].ravel()
+            h2_pos = postitions[pipeline_state.x.pos.shape[0] // 2 :].ravel()
+            position_other_agent = jp.concatenate([h2_pos, h1_pos])
 
         com_inertia = jp.hstack(
             [cinr.i.reshape((cinr.i.shape[0], -1)), inertia.mass[:, None]]
@@ -479,11 +513,13 @@ class Humanoid(PipelineEnv):
             self.sys, action, pipeline_state.q, pipeline_state.qd
         )
         # external_contact_forces are excluded
-        if self._include_other_agents_state or self._full_state_other_agents:
+        if self._full_state_other_agents:
             return jp.concatenate(
                 [
-                    position,
-                    velocity,
+                    xpos,
+                    xvel,
+                    qpos,
+                    qvel,
                     com_inertia.ravel(),
                     com_velocity.ravel(),
                     qfrc_actuator,
@@ -493,8 +529,10 @@ class Humanoid(PipelineEnv):
         else:
             return jp.concatenate(
                 [
-                    position,
-                    velocity,
+                    xpos,
+                    xvel,
+                    qpos,
+                    qvel,
                     com_inertia.ravel(),
                     com_velocity.ravel(),
                     qfrc_actuator,
@@ -503,49 +541,44 @@ class Humanoid(PipelineEnv):
 
     def _com(self, pipeline_state: base.State) -> jax.Array:
         inertia = self.sys.link.inertia
-        if (self.num_humanoids) == 1:
-            mass_sum = jp.sum(inertia.mass)
-            x_i = pipeline_state.x.vmap().do(inertia.transform)
-            com = (
-                jp.sum(jax.vmap(jp.multiply)(inertia.mass, x_i.pos), axis=0) / mass_sum
+        if self.backend in ["spring", "positional"]:
+            inertia = inertia.replace(
+                i=jax.vmap(jp.diag)(
+                    jax.vmap(jp.diagonal)(inertia.i)
+                    ** (1 - self.sys.spring_inertia_scale)
+                ),
+                mass=inertia.mass ** (1 - self.sys.spring_mass_scale),
             )
-        else:
-            inertia_mass = reshape_vector(inertia.mass, (self.num_humanoids, -1, 1))
-            mass_sum = jp.sum(inertia_mass, axis=1)
-            x_i = pipeline_state.x.vmap().do(inertia.transform)
-            x_i_pos = reshape_vector(x_i.pos, (self.num_humanoids, -1, 3))
-            com = jp.sum(
-                jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1
-            ) / reshape_vector(mass_sum, (-1, 1))
+        inertia_mass = reshape_vector(inertia.mass, (self.num_agents, -1, 1))
+        mass_sum = jp.sum(inertia_mass, axis=1)
+        x_i = pipeline_state.x.vmap().do(inertia.transform)
+        x_i_pos = reshape_vector(x_i.pos, (self.num_agents, -1, 3))
+        com = jp.sum(
+            jax.vmap(jp.multiply)(inertia_mass, x_i_pos), axis=1
+        ) / reshape_vector(mass_sum, (-1, 1))
         return com, inertia, mass_sum, x_i
 
     @property
     def dims(self):
-        action_dim = int(self.sys.act_size() / self.num_humanoids)
-        if self._include_other_agents_state:
+        action_dim = int(self.sys.act_size() / self.num_agents)
+        if self._full_state_other_agents:
             return (
-                self._position_dim,
-                self._velocity_dim,
+                self._x_pos,
+                self._x_vel,
+                self._q_pos,
+                self._q_vel,
                 self._com_inertia_dim,
                 self._com_velocity_dim,
                 self._q_actuator_dim,
-                self._other_agent_obs,
-                action_dim,
-            )
-        elif self._full_state_other_agents:
-            return (
-                self._position_dim,
-                self._velocity_dim,
-                self._com_inertia_dim,
-                self._com_velocity_dim,
-                self._q_actuator_dim,
-                self._other_full_state_ob,
+                self._other_full_x_pos,
                 action_dim,
             )
         else:
             return (
-                self._position_dim,
-                self._velocity_dim,
+                self._x_pos,
+                self._x_vel,
+                self._q_pos,
+                self._q_vel,
                 self._com_inertia_dim,
                 self._com_velocity_dim,
                 self._q_actuator_dim,
@@ -566,7 +599,7 @@ class Humanoid(PipelineEnv):
 
     @property
     def action_space(self):
-        return 17 * self.num_humanoids
+        return 17 * self.num_agents
 
 
 @ft.partial(jax.jit, static_argnums=1)

@@ -103,6 +103,20 @@ def load_config(env_name: str = "humanoids") -> Dict:
             "network_config": network_config,
             "train_config": train_config,
         }
+    elif env_name in ["humanoids"]:
+        train_config = load_train_config(CONFIG_TRAIN_HUMANOIDS)
+        env_config = load_reward_config(
+            CONFIG_REWARD_HUMANOIDS, train_config["env_name"]
+        )
+        agent_config = load_agent_config(CONFIG_AGENT_HUMANOIDS)
+        network_config = load_network_config(CONFIG_NETWORK_HUMANOIDS)
+        return {
+            "env_name": train_config["env_name"],
+            "env_config": env_config,
+            "agent_config": agent_config,
+            "network_config": network_config,
+            "train_config": train_config,
+        }
     elif env_name in ["ants"]:
         train_config = load_train_config(CONFIG_TRAIN_ANT)
         env_config = load_reward_config(CONFIG_REWARD_ANT, train_config["env_name"])

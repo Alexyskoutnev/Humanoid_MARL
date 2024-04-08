@@ -6,7 +6,7 @@ import yaml
 import argparse
 from typing import Dict
 
-from Humanoid_MARL.agent.ppo.train_torch import train as train_humanoid
+from Humanoid_MARL.agent.ppo.train_humanoids import train as train_humanoid
 from Humanoid_MARL.agent.ppo.train_lstm import train as train_lstm
 from Humanoid_MARL.agent.ppo.train_ant import train as train_ant
 from Humanoid_MARL.agent.ppo.linked_ball_train import train as train_linked_ball
@@ -27,7 +27,8 @@ def cmd_args():
         "--env_name",
         type=str,
         # default="point_mass",
-        default="ants",
+        # default="ants",
+        default="humanoids",
         # default="linked_balls",
         # default="simple_robots",
         help="environment name",

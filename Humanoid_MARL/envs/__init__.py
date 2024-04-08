@@ -6,7 +6,6 @@ from typing import Optional, Type
 from Humanoid_MARL.envs import (
     humanoids,
     humanoid,
-    humanoids_wall,
     ants,
     point_mass_env,
     simple_robot,
@@ -17,11 +16,8 @@ from Humanoid_MARL.envs.wrappers import VmapWrapper, EpisodeWrapper
 import jax
 
 _envs = {
-    "humanoids": humanoids.Humanoid,
-    "humanoids_debug": humanoids.Humanoid,
+    "humanoids": humanoids.Humanoids,
     "humanoid": humanoid.Humanoid,
-    "humanoids_wall": humanoids_wall.Humanoid,
-    "humanoids_wall_debug": humanoids_wall.Humanoid,
     "ants": ants.Ants,
     "ants_debug": ants.Ants,
     "point_mass": point_mass_env.Point_Mass,
