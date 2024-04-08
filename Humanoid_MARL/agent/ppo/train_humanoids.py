@@ -147,6 +147,8 @@ def eval_unroll(
 
 def get_obs(obs: torch.Tensor, dims: Tuple[int], num_agents: int) -> torch.Tensor:
     # assert obs.shape == 2 #we are assuming that the input has shape [batch_dim, obs_dim]
+    if len(obs.shape) == 1:
+        obs = obs.unsqueeze(0)
     start_idx = 0
     chunks = [None] * len(dims)
     for i, dim in enumerate(dims):
@@ -206,8 +208,11 @@ def get_agent_actions(
     """Return logits and actions for each agent."""
     num_agents = len(agents)
     observation = get_obs(observation, dims, num_agents)
+    print(f"obs shape: {observation.shape}")
+    # breakpoint()
     logits, actions = [], []
     for idx, agent in enumerate(agents):
+        # breakpoint()
         logit, action = agent.get_logits_action(observation[:, idx, :])
         logits.append(logit)
         actions.append(action)
