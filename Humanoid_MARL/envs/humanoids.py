@@ -192,9 +192,7 @@ class Humanoids(PipelineEnv):
         backend="positional",
         **kwargs,
     ):
-        humanoid_2_path = os.path.join(
-            PACKAGE_ROOT, "assets", "humanoid_2_no_collision.xml"
-        )
+        humanoid_2_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_2_walls.xml")
         sys = mjcf.load(humanoid_2_path)
         n_frames = 5
         self.num_agents = 2

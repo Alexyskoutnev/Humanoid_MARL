@@ -208,11 +208,8 @@ def get_agent_actions(
     """Return logits and actions for each agent."""
     num_agents = len(agents)
     observation = get_obs(observation, dims, num_agents)
-    print(f"obs shape: {observation.shape}")
-    # breakpoint()
     logits, actions = [], []
     for idx, agent in enumerate(agents):
-        # breakpoint()
         logit, action = agent.get_logits_action(observation[:, idx, :])
         logits.append(logit)
         actions.append(action)
