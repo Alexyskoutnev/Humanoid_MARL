@@ -7,7 +7,7 @@ num_minibatches: 32
 num_update_epochs: 4
 discounting: 0.97
 learning_rate: 0.001
-entropy_cost: 0.001
+entropy_cost: 0.0005
 num_envs: 2048
 batch_size: 1024
 env_name: ants

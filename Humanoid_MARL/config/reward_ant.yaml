@@ -15,6 +15,6 @@ contact_force_range:
 reset_noise_scale: 0.1
 chase_reward_inverse : false
 full_state_other_agents : true
-tag_reward_weight : 20.0
+tag_reward_weight : 0.0
 backend : "positional"
 random_spawn : false
