@@ -1,4 +1,4 @@
-terminate_when_unhealthy: true
+terminate_when_unhealthy: false
 exclude_current_positions_from_observation: false # Change this to true
 use_contact_forces: false
 contact_cost_weight: 0.00
@@ -15,6 +15,6 @@ contact_force_range:
 reset_noise_scale: 0.1
 chase_reward_inverse : false
 full_state_other_agents : true
-tag_reward_weight : 10.0
+tag_reward_weight : 5.0
 backend : "spring"
 random_spawn : false

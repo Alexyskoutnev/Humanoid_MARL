@@ -165,7 +165,6 @@ class Ants(PipelineEnv):
         **kwargs,
     ):
 
-        # ant_path = os.path.join(PACKAGE_ROOT, "assets", "ants_2.xml")
         ant_path_wall = os.path.join(PACKAGE_ROOT, "assets", "ants_2_walls.xml")
         sys = mjcf.load(ant_path_wall)
 
@@ -196,8 +195,8 @@ class Ants(PipelineEnv):
         self._tag_reward_weight = tag_reward_weight
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = False
-        self._and_done_flag = True
+        self._or_done_flag = True
+        self._and_done_flag = False
         self._full_state_other_agents = full_state_other_agents
         self._random_spawn = random_spawn
 
@@ -206,12 +205,14 @@ class Ants(PipelineEnv):
             self._x_vel = 27
             self._q_pos = 15
             self._q_vel = 14
+            self._wall_d = 4
             self._other_x_pos = 27
         else:
             self._x_pos = 27
             self._x_vel = 27
             self._q_pos = 15
             self._q_vel = 14
+            self._wall_d = 4
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -401,7 +402,6 @@ class Ants(PipelineEnv):
             healthy_reward = (
                 self._healthy_reward * jp.ones(self.num_agents) * is_healthy
             )
-
         tag_reward = self._tag_reward(pipeline_state)
         ctrl_cost = self._control_reward(action)
         contact_cost = 0.0  # TODO: Implement contact cost
@@ -449,12 +449,39 @@ class Ants(PipelineEnv):
             pipeline_state=pipeline_state, obs=obs, reward=reward, done=done
         )
 
+    def _dist_walls(self, pipeline_state: base.State) -> jax.Array:
+        # Distance to wall #1 (x - position)
+        dist_1_a1_x = 5.0 - pipeline_state.x.pos[0, 0]
+        dist_1_a2_x = 5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        # Distance to wall #2 (x - position)
+        dist_2_a1_x = -5.0 - pipeline_state.x.pos[0, 0]
+        dist_2_a2_x = -5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        # Distance to wall #3 (y - position)
+        dist_1_a1_y = 5.0 - pipeline_state.x.pos[0, 1]
+        dist_1_a2_y = 5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        # Distance to wall #4 (y - position)
+        dist_2_a1_y = -5.0 - pipeline_state.x.pos[0, 1]
+        dist_2_a2_y = -5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        return jp.concatenate(
+            [
+                dist_1_a1_x.reshape(-1),
+                dist_2_a1_x.reshape(-1),
+                dist_1_a1_y.reshape(-1),
+                dist_2_a1_y.reshape(-1),
+                dist_1_a2_x.reshape(-1),
+                dist_2_a2_x.reshape(-1),
+                dist_1_a2_y.reshape(-1),
+                dist_2_a2_y.reshape(-1),
+            ]
+        )
+
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe ant body position and velocities."""
         qpos = pipeline_state.q
         xpos = pipeline_state.x.pos.ravel()
         qvel = pipeline_state.qd
         xvel = pipeline_state.xd.vel.ravel()
+        wall_dist = self._dist_walls(pipeline_state)
 
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
@@ -466,20 +493,19 @@ class Ants(PipelineEnv):
         if self._full_state_other_agents:
             if self._exclude_current_positions_from_observation:
                 raise NotImplementedError("Full state other agents not implemented.")
-                # a1_pos = xpos[0:27]
-                # a2_pos = xpos[27:56]
-                # positions_other_agents = jp.concatenate([a2_pos, a1_pos])
-                # return jp.concatenate(
-                #     [xpos] + [xvel] + [positions_other_agents]
-                # )
             else:
                 a1_pos = xpos[0 : pipeline_state.x.pos.shape[0] // 2 * 3]
                 a2_pos = xpos[pipeline_state.x.pos.shape[0] // 2 * 3 :]
                 positions_other_agents = jp.concatenate([a2_pos, a1_pos])
                 return jp.concatenate(
-                    [xpos] + [xvel] + [qpos] + [qvel] + [positions_other_agents]
+                    [xpos]
+                    + [xvel]
+                    + [qpos]
+                    + [qvel]
+                    + [wall_dist]
+                    + [positions_other_agents]
                 )
-        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel])
+        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel] + [wall_dist])
 
     @property
     def dims(self):
@@ -491,6 +517,7 @@ class Ants(PipelineEnv):
                 self._q_pos,
                 self._q_vel,
                 self._other_x_pos,
+                self._wall_d,
                 action_dim,
             )
         else:
@@ -499,6 +526,7 @@ class Ants(PipelineEnv):
                 self._x_vel,
                 self._q_pos,
                 self._q_vel,
+                self._wall_d,
                 action_dim,
             )
 
