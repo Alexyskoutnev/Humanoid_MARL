@@ -3,7 +3,7 @@
   <option timestep="0.02" iterations="4" />
   <custom>
     <!-- brax custom params -->
-    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 3.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+    <!-- <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0 3.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/> -->
     <numeric data="1000" name="constraint_limit_stiffness"/>
     <numeric data="4000" name="constraint_stiffness"/>
     <numeric data="10" name="constraint_ang_damping"/>
@@ -21,9 +21,9 @@
      rgba="0.4 0.33 0.26 1.0"/>
   </default>
   <asset>
-    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="150"/>
     <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
-    <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="150"/>
     <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
     <material name="geom" texture="texgeom" texuniform="true"/>
     <material name="red" rgba="1 0 0 0.5"/>
@@ -143,27 +143,27 @@
         </body>
       </body>
     </body>
-    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 10 1" pos="10 0 1"/>
-    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 10 1" pos="0 10 1" quat="0.7071 0 0 0.7071"/>
-    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 10 1" pos="0 -10 1" quat="0.7071 0 0 0.7071"/>
-    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 10 1" pos="-10 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 5 1" pos="5 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 5 1" pos="0 5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 5 1" pos="0 -5 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 5 1" pos="-5 0 1"/>
   </worldbody>
   <actuator>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="100"/>
-    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="100"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3_a_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3_a_2" gear="150"/>
   </actuator>
 </mujoco>
