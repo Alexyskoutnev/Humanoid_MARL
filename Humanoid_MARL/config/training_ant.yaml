@@ -1,4 +1,4 @@
-num_timesteps: 300_000_000
+num_timesteps: 3_000_000_000
 eval_reward_limit: 10_000
 eval_frequency: 1000
 episode_length: 1000
@@ -8,8 +8,8 @@ num_update_epochs: 4
 discounting: 0.97
 # learning_rate: 0.0003
 learning_rate: 0.001
-entropy_cost: 0.0005
-num_envs: 2048
+entropy_cost: 0.0001
+num_envs: 4048
 batch_size: 1024
 env_name: ants
 device: cuda

@@ -451,17 +451,21 @@ class Ants(PipelineEnv):
 
     def _dist_walls(self, pipeline_state: base.State) -> jax.Array:
         # Distance to wall #1 (x - position)
-        dist_1_a1_x = 5.0 - pipeline_state.x.pos[0, 0]
-        dist_1_a2_x = 5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        dist_1_a1_x = 10.0 - pipeline_state.x.pos[0, 0]
+        dist_1_a2_x = 10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
         # Distance to wall #2 (x - position)
-        dist_2_a1_x = -5.0 - pipeline_state.x.pos[0, 0]
-        dist_2_a2_x = -5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        dist_2_a1_x = -10.0 - pipeline_state.x.pos[0, 0]
+        dist_2_a2_x = (
+            -10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        )
         # Distance to wall #3 (y - position)
-        dist_1_a1_y = 5.0 - pipeline_state.x.pos[0, 1]
-        dist_1_a2_y = 5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        dist_1_a1_y = 10.0 - pipeline_state.x.pos[0, 1]
+        dist_1_a2_y = 10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
         # Distance to wall #4 (y - position)
-        dist_2_a1_y = -5.0 - pipeline_state.x.pos[0, 1]
-        dist_2_a2_y = -5.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        dist_2_a1_y = -10.0 - pipeline_state.x.pos[0, 1]
+        dist_2_a2_y = (
+            -10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        )
         return jp.concatenate(
             [
                 dist_1_a1_x.reshape(-1),
