@@ -510,6 +510,7 @@ def train(
         debug=debug,
         network_config=network_config,
     )
+    original_model_name = model_name.split(".")[0]
     # ========= create the agent =============
     for eval_i in range(eval_frequency + 1):
         if eval_flag:
@@ -547,6 +548,7 @@ def train(
                     progress_fn(total_steps, progress)
             # Save model functionality
             try:
+                model_name = f"{original_model_name}_{total_steps}.pt"
                 save_models(
                     agents, network_arch, model_name=model_name, notebook=notebook
                 )
@@ -590,6 +592,16 @@ def train(
                 env.obs_dims_tuple,
             )
             for update_epoch in range(num_update_epochs):
+                if (
+                    num_update_epochs - agent_config.get("agent_1_update_rate")
+                    < update_epoch
+                ):
+                    continue
+                if (
+                    num_update_epochs - agent_config.get("agent_2_update_rate")
+                    < update_epoch
+                ):
+                    continue
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
 
