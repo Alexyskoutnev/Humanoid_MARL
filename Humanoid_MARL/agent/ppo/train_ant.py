@@ -592,16 +592,7 @@ def train(
                 env.obs_dims_tuple,
             )
             for update_epoch in range(num_update_epochs):
-                if (
-                    num_update_epochs - agent_config.get("agent_1_update_rate")
-                    < update_epoch
-                ):
-                    continue
-                if (
-                    num_update_epochs - agent_config.get("agent_2_update_rate")
-                    < update_epoch
-                ):
-                    continue
+
                 with torch.no_grad():
                     permutation = torch.randperm(td.observation.shape[1], device=device)
 
@@ -623,6 +614,16 @@ def train(
                         num_agents=env.num_agents,
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
+                        if idx == 0 and (
+                            num_update_epochs - agent_config.get("agent_1_update_rate")
+                            < update_epoch
+                        ):
+                            continue
+                        if idx == 1 and (
+                            num_update_epochs - agent_config.get("agent_2_update_rate")
+                            < update_epoch
+                        ):
+                            continue
                         if agent_config.get("freeze_idx") == idx:
                             continue
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)

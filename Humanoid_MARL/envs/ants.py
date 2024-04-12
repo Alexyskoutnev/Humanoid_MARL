@@ -197,8 +197,8 @@ class Ants(PipelineEnv):
         self._stand_up_reward_weight = stand_up_reward_weight
         self.num_agents = 2
         self._dims = None
-        self._or_done_flag = True
-        self._and_done_flag = False
+        self._or_done_flag = False
+        self._and_done_flag = True
         self._full_state_other_agents = full_state_other_agents
         self._random_spawn = random_spawn
 
