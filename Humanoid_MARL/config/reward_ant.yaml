@@ -2,13 +2,13 @@ terminate_when_unhealthy: true
 exclude_current_positions_from_observation: false # Change this to true
 use_contact_forces: false
 contact_cost_weight: 0.00
-ctrl_cost_weight: 0.0
-healthy_reward: 0.0
+ctrl_cost_weight: 0.5
+healthy_reward: 0.1
 chase_reward_weight : 0.5
 forward_reward_weight: 0.0
 healthy_z_range:
   - 0.2
-  - 1.5
+  - 3.0
 contact_force_range:
   - -1.0
   - 1.0
@@ -17,5 +17,5 @@ chase_reward_inverse : false
 full_state_other_agents : true
 tag_reward_weight : 0.0
 backend : "spring"
-random_spawn : false
+random_spawn : true
 stand_up_reward_weight : 0.0

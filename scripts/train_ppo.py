@@ -137,8 +137,6 @@ def main(args):
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
             )
-    print(f"time to jit: {times[1] - times[0]}")
-    print(f"time to train: {times[-1] - times[1]}")
 
 
 if __name__ == "__main__":
