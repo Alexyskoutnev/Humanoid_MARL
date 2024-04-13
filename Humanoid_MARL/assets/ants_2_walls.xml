@@ -143,10 +143,10 @@
         </body>
       </body>
     </body>
-    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 10 1" pos="10 0 1"/>
-    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 10 1" pos="0 10 1" quat="0.7071 0 0 0.7071"/>
-    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 10 1" pos="0 -10 1" quat="0.7071 0 0 0.7071"/>
-    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 10 1" pos="-10 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 7 1" pos="7 0 1"/>
+    <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 7 1" pos="0 7 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 7 1" pos="0 -7 1" quat="0.7071 0 0 0.7071"/>
+    <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 7 1" pos="-7 0 1"/>
   </worldbody>
   <actuator>
     <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4_a_1" gear="150"/>

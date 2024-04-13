@@ -160,6 +160,7 @@ class Ants(PipelineEnv):
         tag_reward_weight=0.0,
         stand_up_reward_weight=1.0,
         angle_penalty_weight=1.0,
+        wall_penalty_weight=1.0,
         chase_reward_inverse=True,
         full_state_other_agents=True,
         random_spawn=False,
@@ -197,6 +198,7 @@ class Ants(PipelineEnv):
         self._tag_reward_weight = tag_reward_weight
         self._stand_up_reward_weight = stand_up_reward_weight
         self._angle_penalty_weight = angle_penalty_weight
+        self._wall_penalty_weight = 1.0
         self.num_agents = 2
         self._dims = None
         self._or_done_flag = False
@@ -211,6 +213,8 @@ class Ants(PipelineEnv):
             self._q_vel = 14
             self._q_ang = 4
             self._wall_d = 4
+            self._local_frame_other_x_pos = 3
+            self._dist_btw_agents = 1
             self._other_x_pos = 27
         else:
             self._x_pos = 27
@@ -219,6 +223,8 @@ class Ants(PipelineEnv):
             self._q_vel = 14
             self._q_ang = 4
             self._wall_d = 4
+            self._local_frame_other_x_pos = 3
+            self._dist_btw_agents = 1
 
         if self._use_contact_forces:
             raise NotImplementedError("use_contact_forces not implemented.")
@@ -230,8 +236,8 @@ class Ants(PipelineEnv):
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
         if self._random_spawn:
             rng1, rng2 = jax.random.split(rng1)
-            pos_low = -5.0
-            pos_hi = 5.0
+            pos_low = -2.0
+            pos_hi = 2.0
             q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a1 = q_init_a1.at[0].set(
@@ -280,6 +286,7 @@ class Ants(PipelineEnv):
             "z_position": dummy_val,
             "stand_up_reward": dummy_val,
             "angle_penalty": dummy_val,
+            "wall_penalty": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -442,6 +449,7 @@ class Ants(PipelineEnv):
         stand_up_reward = self._stand_up_reward(pipeline_state)
         tag_reward = self._tag_reward(pipeline_state)
         ctrl_cost = self._control_reward(action)
+        wall_penalty = self._wall_penalty(pipeline_state)
         contact_cost = 0.0  # TODO: Implement contact cost
         chase_reward = self._chase_reward_fn(pipeline_state)
         angle_penalty = self._angle_penalty(pipeline_state)
@@ -454,6 +462,7 @@ class Ants(PipelineEnv):
             + chase_reward
             + stand_up_reward
             - angle_penalty
+            - wall_penalty
         )
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
@@ -492,6 +501,7 @@ class Ants(PipelineEnv):
             z_position=z_pos,
             stand_up_reward=stand_up_reward,
             angle_penalty=-angle_penalty,
+            wall_penalty=-wall_penalty,
         )
 
         return state.replace(
@@ -500,21 +510,17 @@ class Ants(PipelineEnv):
 
     def _dist_walls(self, pipeline_state: base.State) -> jax.Array:
         # Distance to wall #1 (x - position)
-        dist_1_a1_x = 10.0 - pipeline_state.x.pos[0, 0]
-        dist_1_a2_x = 10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        dist_1_a1_x = 7.0 - pipeline_state.x.pos[0, 0]
+        dist_1_a2_x = 7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
         # Distance to wall #2 (x - position)
-        dist_2_a1_x = -10.0 - pipeline_state.x.pos[0, 0]
-        dist_2_a2_x = (
-            -10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
-        )
+        dist_2_a1_x = -7.0 - pipeline_state.x.pos[0, 0]
+        dist_2_a2_x = -7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
         # Distance to wall #3 (y - position)
-        dist_1_a1_y = 10.0 - pipeline_state.x.pos[0, 1]
-        dist_1_a2_y = 10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        dist_1_a1_y = 7.0 - pipeline_state.x.pos[0, 1]
+        dist_1_a2_y = 7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
         # Distance to wall #4 (y - position)
-        dist_2_a1_y = -10.0 - pipeline_state.x.pos[0, 1]
-        dist_2_a2_y = (
-            -10.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
-        )
+        dist_2_a1_y = -7.0 - pipeline_state.x.pos[0, 1]
+        dist_2_a2_y = -7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
         return jp.concatenate(
             [
                 dist_1_a1_x.reshape(-1),
@@ -528,9 +534,23 @@ class Ants(PipelineEnv):
             ]
         )
 
+    def _wall_penalty(self, pipeline_state: base.State) -> jax.Array:
+        a1_pos = pipeline_state.x.pos[0][0:2]
+        a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0:2]
+        wall_a1_pen = jp.exp(10 * (jp.abs(a1_pos) - 6.5))
+        wall_a2_pen = jp.exp(10 * (jp.abs(a2_pos) - 6.5))
+        wall_a1_combined = jp.sum(wall_a1_pen)
+        wall_a2_combined = jp.sum(wall_a2_pen)
+        return (
+            jp.concatenate([wall_a1_combined.reshape(-1), wall_a2_combined.reshape(-1)])
+            * self._wall_penalty_weight
+        )
+
     def _get_obs(self, pipeline_state: base.State) -> jax.Array:
         """Observe ant body position and velocities."""
         qpos = pipeline_state.q
+        a1_pos = pipeline_state.x.pos[0]
+        a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2]
         xpos = pipeline_state.x.pos.ravel()
         qvel = pipeline_state.qd
         ang_q = jp.concatenate(
@@ -541,6 +561,14 @@ class Ants(PipelineEnv):
         )
         xvel = pipeline_state.xd.vel.ravel()
         wall_dist = self._dist_walls(pipeline_state)
+
+        ref_a1_2_a2 = a2_pos - a1_pos
+        ref_a2_2_a1 = a1_pos - a2_pos
+        local_frame_other_agents = jp.concatenate([ref_a1_2_a2, ref_a2_2_a1])
+        dist_btw_agents = jp.linalg.norm(ref_a1_2_a2)
+        dist_btw_agents = jp.concatenate(
+            [dist_btw_agents.reshape(-1), dist_btw_agents.reshape(-1)]
+        )
 
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
@@ -564,8 +592,19 @@ class Ants(PipelineEnv):
                     + [wall_dist]
                     + [positions_other_agents]
                     + [ang_q]
+                    + [local_frame_other_agents]
+                    + [dist_btw_agents]
                 )
-        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel] + [wall_dist] + [ang_q])
+        return jp.concatenate(
+            [xpos]
+            + [xvel]
+            + [qpos]
+            + [qvel]
+            + [wall_dist]
+            + [ang_q]
+            + [local_frame_other_agents]
+            + [dist_btw_agents]
+        )
 
     def _quaternion_to_rotation_matrix(self, q):
         w, x, y, z = q
@@ -610,6 +649,8 @@ class Ants(PipelineEnv):
                 self._other_x_pos,
                 self._wall_d,
                 self._q_ang,
+                self._local_frame_other_x_pos,
+                self._dist_btw_agents,
                 action_dim,
             )
         else:
@@ -620,6 +661,8 @@ class Ants(PipelineEnv):
                 self._q_vel,
                 self._wall_d,
                 self._q_ang,
+                self._local_frame_other_x_pos,
+                self._dist_btw_agents,
                 action_dim,
             )
 
