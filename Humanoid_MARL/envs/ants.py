@@ -491,7 +491,7 @@ class Ants(PipelineEnv):
             reward_tag=tag_reward,
             z_position=z_pos,
             stand_up_reward=stand_up_reward,
-            angle_penalty=angle_penalty,
+            angle_penalty=-angle_penalty,
         )
 
         return state.replace(
