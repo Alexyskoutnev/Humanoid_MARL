@@ -159,6 +159,7 @@ class Ants(PipelineEnv):
         chase_reward_weight=1.0,
         tag_reward_weight=0.0,
         stand_up_reward_weight=1.0,
+        angle_penalty_weight=1.0,
         chase_reward_inverse=True,
         full_state_other_agents=True,
         random_spawn=False,
@@ -195,6 +196,7 @@ class Ants(PipelineEnv):
         self._chase_reward_inverse = chase_reward_inverse
         self._tag_reward_weight = tag_reward_weight
         self._stand_up_reward_weight = stand_up_reward_weight
+        self._angle_penalty_weight = angle_penalty_weight
         self.num_agents = 2
         self._dims = None
         self._or_done_flag = False
@@ -207,6 +209,7 @@ class Ants(PipelineEnv):
             self._x_vel = 27
             self._q_pos = 15
             self._q_vel = 14
+            self._q_ang = 4
             self._wall_d = 4
             self._other_x_pos = 27
         else:
@@ -214,6 +217,7 @@ class Ants(PipelineEnv):
             self._x_vel = 27
             self._q_pos = 15
             self._q_vel = 14
+            self._q_ang = 4
             self._wall_d = 4
 
         if self._use_contact_forces:
@@ -275,6 +279,7 @@ class Ants(PipelineEnv):
             "reward_tag": dummy_val,
             "z_position": dummy_val,
             "stand_up_reward": dummy_val,
+            "angle_penalty": dummy_val,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -384,6 +389,10 @@ class Ants(PipelineEnv):
         norm = jp.concatenate([norm_origin_distance_a_1, norm_origin_distance_a_2])
         return norm
 
+    def _calculate_penalty(self, deviation):
+        penalty = deviation**2
+        return penalty
+
     def _stand_up_reward(self, pipeline_state: base.State) -> jax.Array:
         z_pos = jp.concatenate(
             [
@@ -394,6 +403,20 @@ class Ants(PipelineEnv):
             ]
         )
         return z_pos * self._stand_up_reward_weight
+
+    def _angle_penalty(self, pipeline_state: base.State) -> jax.Array:
+        deviation_a_1 = self._calculate_penalty(
+            self._compute_deviation_from_z_axis(pipeline_state.x.rot[0])
+        )
+        deviation_a_2 = self._calculate_penalty(
+            self._compute_deviation_from_z_axis(
+                pipeline_state.x.rot[pipeline_state.x.rot.shape[0] // 2]
+            )
+        )
+        return (
+            jp.concatenate([deviation_a_1.reshape(-1), deviation_a_2.reshape(-1)])
+            * self._angle_penalty_weight
+        )
 
     def step(self, state: State, action: jax.Array) -> State:
         """Run one timestep of the environment's dynamics."""
@@ -421,6 +444,7 @@ class Ants(PipelineEnv):
         ctrl_cost = self._control_reward(action)
         contact_cost = 0.0  # TODO: Implement contact cost
         chase_reward = self._chase_reward_fn(pipeline_state)
+        angle_penalty = self._angle_penalty(pipeline_state)
         obs = self._get_obs(pipeline_state)
         reward = (
             forward_reward
@@ -429,6 +453,7 @@ class Ants(PipelineEnv):
             + tag_reward
             + chase_reward
             + stand_up_reward
+            - angle_penalty
         )
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
@@ -466,6 +491,7 @@ class Ants(PipelineEnv):
             reward_tag=tag_reward,
             z_position=z_pos,
             stand_up_reward=stand_up_reward,
+            angle_penalty=angle_penalty,
         )
 
         return state.replace(
@@ -507,6 +533,12 @@ class Ants(PipelineEnv):
         qpos = pipeline_state.q
         xpos = pipeline_state.x.pos.ravel()
         qvel = pipeline_state.qd
+        ang_q = jp.concatenate(
+            [
+                pipeline_state.x.rot[0],
+                pipeline_state.x.rot[pipeline_state.x.rot.shape[0] // 2],
+            ]
+        )
         xvel = pipeline_state.xd.vel.ravel()
         wall_dist = self._dist_walls(pipeline_state)
 
@@ -531,8 +563,40 @@ class Ants(PipelineEnv):
                     + [qvel]
                     + [wall_dist]
                     + [positions_other_agents]
+                    + [ang_q]
                 )
-        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel] + [wall_dist])
+        return jp.concatenate([xpos] + [xvel] + [qpos] + [qvel] + [wall_dist] + [ang_q])
+
+    def _quaternion_to_rotation_matrix(self, q):
+        w, x, y, z = q
+        R = jp.array(
+            [
+                [
+                    1 - 2 * y**2 - 2 * z**2,
+                    2 * x * y - 2 * w * z,
+                    2 * x * z + 2 * w * y,
+                ],
+                [
+                    2 * x * y + 2 * w * z,
+                    1 - 2 * x**2 - 2 * z**2,
+                    2 * y * z - 2 * w * x,
+                ],
+                [
+                    2 * x * z - 2 * w * y,
+                    2 * y * z + 2 * w * x,
+                    1 - 2 * x**2 - 2 * y**2,
+                ],
+            ]
+        )
+        return R
+
+    def _compute_deviation_from_z_axis(self, quaternion):
+        R = self._quaternion_to_rotation_matrix(quaternion)
+        z_axis_after_rotation = R[:, 2]
+        actual_z_axis = jp.array([0, 0, 1])
+        cos_theta = jp.dot(z_axis_after_rotation, actual_z_axis)
+        deviation = jp.arccos(cos_theta)
+        return deviation
 
     @property
     def dims(self):
@@ -545,6 +609,7 @@ class Ants(PipelineEnv):
                 self._q_vel,
                 self._other_x_pos,
                 self._wall_d,
+                self._q_ang,
                 action_dim,
             )
         else:
@@ -554,6 +619,7 @@ class Ants(PipelineEnv):
                 self._q_pos,
                 self._q_vel,
                 self._wall_d,
+                self._q_ang,
                 action_dim,
             )
 
