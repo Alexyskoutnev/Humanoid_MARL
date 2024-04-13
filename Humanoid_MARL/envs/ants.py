@@ -537,8 +537,8 @@ class Ants(PipelineEnv):
     def _wall_penalty(self, pipeline_state: base.State) -> jax.Array:
         a1_pos = pipeline_state.x.pos[0][0:2]
         a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0:2]
-        wall_a1_pen = jp.exp(10 * (jp.abs(a1_pos) - 6.5))
-        wall_a2_pen = jp.exp(10 * (jp.abs(a2_pos) - 6.5))
+        wall_a1_pen = jp.exp(10 * (jp.abs(a1_pos) - 6.4))
+        wall_a2_pen = jp.exp(10 * (jp.abs(a2_pos) - 6.4))
         wall_a1_combined = jp.sum(wall_a1_pen)
         wall_a2_combined = jp.sum(wall_a2_pen)
         return (
