@@ -15,7 +15,7 @@ contact_force_range:
 reset_noise_scale: 0.1
 chase_reward_inverse : false
 full_state_other_agents : true
-tag_reward_weight : 0.0
+tag_reward_weight : 1.0
 backend : "spring"
 random_spawn : false
 stand_up_reward_weight : 0.0

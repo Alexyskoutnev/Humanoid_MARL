@@ -165,10 +165,10 @@
             </body>
         </body>
 
-        <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 5 1" pos="5 0 1"/>
-        <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 5 1" pos="0 5 1" quat="0.7071 0 0 0.7071"/>
-        <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 5 1" pos="0 -5 1" quat="0.7071 0 0 0.7071"/>
-        <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 5 1" pos="-5 0 1"/>
+        <geom conaffinity="2" condim="3" name="wall_1" type="box" size="0.1 7 1" pos="7 0 1"/>
+        <geom conaffinity="2" condim="3" name="wall_2" type="box" size="0.1 7 1" pos="0 7 1" quat="0.7071 0 0 0.7071"/>
+        <geom conaffinity="2" condim="3" name="wall_3" type="box" size="0.1 7 1" pos="0 -7 1" quat="0.7071 0 0 0.7071"/>
+        <geom conaffinity="2" condim="3" name="wall_4" type="box" size="0.1 7 1" pos="-7 0 1"/>
     </worldbody>
 
     <actuator>

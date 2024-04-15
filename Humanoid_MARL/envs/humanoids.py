@@ -181,6 +181,8 @@ class Humanoids(PipelineEnv):
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.5),
         reset_noise_scale=1e-2,
+        angle_penalty_weight=1.0,
+        wall_penalty_weight=1.0,
         exclude_current_positions_from_observation=False,
         include_standing_up_flag=False,
         or_done_flag=False,
@@ -205,6 +207,9 @@ class Humanoids(PipelineEnv):
         self._com_inertia_dim = 110
         self._com_velocity_dim = 66
         self._q_actuator_dim = 23
+        self._ang_q_dim = 4
+        self._local_frame_other_agents = 3
+        self._dist_btw_agents = 1
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
 
@@ -256,6 +261,7 @@ class Humanoids(PipelineEnv):
         self._ctrl_cost_weight = ctrl_cost_weight
         self._healthy_reward = healthy_reward
         self._chase_reward_weight = chase_reward_weight
+        self._angle_penalty_weight = angle_penalty_weight
         self._chase_reward_inverse = chase_reward_inverse
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
@@ -264,6 +270,7 @@ class Humanoids(PipelineEnv):
         self._standup_cost = standup_cost
         self._tag_reward = tag_reward
         self._tag_reward_weight = tag_reward_weight
+        self._wall_penalty_weight = wall_penalty_weight
         self._chase_reward = chase_reward
         self._or_done_flag = or_done_flag
         self._and_done_flag = and_done_flag
@@ -300,6 +307,8 @@ class Humanoids(PipelineEnv):
             "y_velocity": zero_init,
             "z_position": zero_init,
             "tag_reward": zero_init,
+            "wall_penalty": zero_init,
+            "angle_penalty": zero_init,
         }
         return State(pipeline_state, obs, reward, done, metrics)
 
@@ -381,6 +390,24 @@ class Humanoids(PipelineEnv):
         threshold_int = is_below_threshold.astype(jp.int32)
         return threshold_int * jp.array([1.0, -1.0]) * self._tag_reward_weight
 
+    def _calculate_penalty(self, deviation):
+        penalty = deviation**2
+        return penalty
+
+    def _angle_penalty(self, pipeline_state: base.State) -> jax.Array:
+        deviation_a_1 = self._calculate_penalty(
+            self._compute_deviation_from_z_axis(pipeline_state.x.rot[0])
+        )
+        deviation_a_2 = self._calculate_penalty(
+            self._compute_deviation_from_z_axis(
+                pipeline_state.x.rot[pipeline_state.x.rot.shape[0] // 2]
+            )
+        )
+        return (
+            jp.concatenate([deviation_a_1.reshape(-1), deviation_a_2.reshape(-1)])
+            * self._angle_penalty_weight
+        )
+
     def step(self, state: State, action: jax.Array) -> State:
         """Runs one timestep of the environment's dynamics."""
         pipeline_state0 = state.pipeline_state
@@ -399,6 +426,7 @@ class Humanoids(PipelineEnv):
 
         min_z, max_z = self._healthy_z_range
         is_healthy, env_done = self._check_is_healthy(pipeline_state, min_z, max_z)
+
         if self._terminate_when_unhealthy:
             healthy_reward = (
                 self._healthy_reward * jp.ones(self.num_agents) * is_healthy
@@ -422,8 +450,10 @@ class Humanoids(PipelineEnv):
             tag_reward = jp.zeros(2)
 
         ctrl_cost = self._control_reward(action)
-
+        angle_penalty = self._angle_penalty(pipeline_state)
+        wall_penalty = self._wall_penalty(pipeline_state)
         obs = self._get_obs(pipeline_state, action)
+
         reward = (
             forward_reward
             + healthy_reward
@@ -431,6 +461,8 @@ class Humanoids(PipelineEnv):
             + uph_cost
             + chase_reward
             + tag_reward
+            - angle_penalty
+            - wall_penalty
         )
         done = 1.0 - env_done if self._terminate_when_unhealthy else 0.0
 
@@ -454,6 +486,8 @@ class Humanoids(PipelineEnv):
             z_position=humanoids_z,
             standup_reward=uph_cost,
             tag_reward=tag_reward,
+            angle_penalty=-angle_penalty,
+            wall_penalty=-wall_penalty,
         )
 
         return state.replace(
@@ -467,8 +501,23 @@ class Humanoids(PipelineEnv):
         """Observes humanoid body position, velocities, and angles."""
         qpos = pipeline_state.q
         qvel = pipeline_state.qd
+        a1_pos = pipeline_state.x.pos[0]
+        a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2]
         xpos = pipeline_state.x.pos.ravel()
         xvel = pipeline_state.xd.vel.ravel()
+        ang_q = jp.concatenate(
+            [
+                pipeline_state.x.rot[0],
+                pipeline_state.x.rot[pipeline_state.x.rot.shape[0] // 2],
+            ]
+        )
+        ref_a1_2_a2 = a2_pos - a1_pos
+        ref_a2_2_a1 = a1_pos - a2_pos
+        local_frame_other_agents = jp.concatenate([ref_a1_2_a2, ref_a2_2_a1])
+        dist_btw_agents = jp.linalg.norm(ref_a1_2_a2)
+        dist_btw_agents = jp.concatenate(
+            [dist_btw_agents.reshape(-1), dist_btw_agents.reshape(-1)]
+        )
 
         if self._exclude_current_positions_from_observation:
             indices_to_remove = np.array(
@@ -522,6 +571,9 @@ class Humanoids(PipelineEnv):
                     com_velocity.ravel(),
                     qfrc_actuator,
                     position_other_agent,
+                    ang_q,
+                    local_frame_other_agents,
+                    dist_btw_agents,
                 ]
             )
         else:
@@ -534,6 +586,9 @@ class Humanoids(PipelineEnv):
                     com_inertia.ravel(),
                     com_velocity.ravel(),
                     qfrc_actuator,
+                    ang_q,
+                    local_frame_other_agents,
+                    dist_btw_agents,
                 ]
             )
 
@@ -556,6 +611,75 @@ class Humanoids(PipelineEnv):
         ) / reshape_vector(mass_sum, (-1, 1))
         return com, inertia, mass_sum, x_i
 
+    def _quaternion_to_rotation_matrix(self, q):
+        w, x, y, z = q
+        R = jp.array(
+            [
+                [
+                    1 - 2 * y**2 - 2 * z**2,
+                    2 * x * y - 2 * w * z,
+                    2 * x * z + 2 * w * y,
+                ],
+                [
+                    2 * x * y + 2 * w * z,
+                    1 - 2 * x**2 - 2 * z**2,
+                    2 * y * z - 2 * w * x,
+                ],
+                [
+                    2 * x * z - 2 * w * y,
+                    2 * y * z + 2 * w * x,
+                    1 - 2 * x**2 - 2 * y**2,
+                ],
+            ]
+        )
+        return R
+
+    def _compute_deviation_from_z_axis(self, quaternion):
+        R = self._quaternion_to_rotation_matrix(quaternion)
+        z_axis_after_rotation = R[:, 2]
+        actual_z_axis = jp.array([0, 0, 1])
+        cos_theta = jp.dot(z_axis_after_rotation, actual_z_axis)
+        deviation = jp.arccos(cos_theta)
+        return deviation
+
+    def _dist_walls(self, pipeline_state: base.State) -> jax.Array:
+        # Distance to wall #1 (x - position)
+        dist_1_a1_x = 7.0 - pipeline_state.x.pos[0, 0]
+        dist_1_a2_x = 7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        # Distance to wall #2 (x - position)
+        dist_2_a1_x = -7.0 - pipeline_state.x.pos[0, 0]
+        dist_2_a2_x = -7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        # Distance to wall #3 (y - position)
+        dist_1_a1_y = 7.0 - pipeline_state.x.pos[0, 1]
+        dist_1_a2_y = 7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        # Distance to wall #4 (y - position)
+        dist_2_a1_y = -7.0 - pipeline_state.x.pos[0, 1]
+        dist_2_a2_y = -7.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        return jp.concatenate(
+            [
+                dist_1_a1_x.reshape(-1),
+                dist_2_a1_x.reshape(-1),
+                dist_1_a1_y.reshape(-1),
+                dist_2_a1_y.reshape(-1),
+                dist_1_a2_x.reshape(-1),
+                dist_2_a2_x.reshape(-1),
+                dist_1_a2_y.reshape(-1),
+                dist_2_a2_y.reshape(-1),
+            ]
+        )
+
+    def _wall_penalty(self, pipeline_state: base.State) -> jax.Array:
+        a1_pos = pipeline_state.x.pos[0][0:2]
+        a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0:2]
+        wall_a1_pen = jp.exp(10 * (jp.abs(a1_pos) - 6.4))
+        wall_a2_pen = jp.exp(10 * (jp.abs(a2_pos) - 6.4))
+        wall_a1_combined = jp.sum(wall_a1_pen)
+        wall_a2_combined = jp.sum(wall_a2_pen)
+        return (
+            jp.concatenate([wall_a1_combined.reshape(-1), wall_a2_combined.reshape(-1)])
+            * self._wall_penalty_weight
+        )
+
     @property
     def dims(self):
         action_dim = int(self.sys.act_size() / self.num_agents)
@@ -569,6 +693,9 @@ class Humanoids(PipelineEnv):
                 self._com_velocity_dim,
                 self._q_actuator_dim,
                 self._other_full_x_pos,
+                self._ang_q_dim,
+                self._local_frame_other_agents,
+                self._dist_btw_agents,
                 action_dim,
             )
         else:
@@ -580,6 +707,9 @@ class Humanoids(PipelineEnv):
                 self._com_inertia_dim,
                 self._com_velocity_dim,
                 self._q_actuator_dim,
+                self._ang_q_dim,
+                self._local_frame_other_agents,
+                self._dist_btw_agents,
                 action_dim,
             )
 

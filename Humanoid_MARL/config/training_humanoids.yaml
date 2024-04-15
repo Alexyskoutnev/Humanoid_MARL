@@ -6,8 +6,8 @@ unroll_length: 5
 num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.97
-learning_rate: 0.001
-entropy_cost: 0.0000
+learning_rate: 0.0003
+entropy_cost: 0.0001
 num_envs: 1024
 batch_size: 256
 env_name: humanoids
