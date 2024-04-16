@@ -8,6 +8,24 @@ SAVE_MODELS = "./models"
 SAVE_MODEL_NOTEBOOK = "../models"
 
 
+def save_model(agents: List[Agent], network_arch: Dict, model_name: str) -> None:
+    filename = os.path.join(SAVE_MODELS, model_name)
+    state_dicts = {"network_arch": network_arch, "agents": []}
+    for i, agent in enumerate(agents):
+        agent_dict = {
+            "index": i,
+            f"agent_policy_{i}": agent.policy.state_dict(),
+            f"agent_value_{i}": agent.value.state_dict(),
+            f"running_mean_{i}": agent.running_mean,
+            f"running_variance_{i}": agent.running_variance,
+            f"num_steps_{i}": agent.num_steps,
+        }
+        state_dicts["agents"].append(agent_dict)
+
+    torch.save(state_dicts, filename)
+    print(f"Agents saved to {filename}")
+
+
 def save_models(
     agents: List[Agent], network_arch: Dict, model_name: str, notebook: bool = False
 ) -> None:

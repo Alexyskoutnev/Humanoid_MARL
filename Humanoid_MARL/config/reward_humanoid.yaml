@@ -3,7 +3,6 @@ exclude_current_positions_from_observation: true
 forward_reward_weight: 0.0
 ctrl_cost_weight: 0.1
 healthy_reward: 5.0
-dummy_dims : 33
 healthy_z_range:
   - 0.8
   - 2.5

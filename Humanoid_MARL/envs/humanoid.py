@@ -185,7 +185,7 @@ class Humanoid(PipelineEnv):
         reset_noise_scale=1e-2,
         exclude_current_positions_from_observation=True,
         dummy_dims=0,
-        backend="generalized",
+        backend="spring",
         **kwargs,
     ):
         # path = epath.resource_path("brax") / "envs/assets/humanoid.xml"
@@ -223,7 +223,6 @@ class Humanoid(PipelineEnv):
             sys = sys.replace(actuator=sys.actuator.replace(gear=gear))
 
         kwargs["n_frames"] = kwargs.get("n_frames", n_frames)
-
         super().__init__(sys=sys, backend=backend, **kwargs)
 
         self.num_humanoids = 1

@@ -6,7 +6,8 @@ import yaml
 import argparse
 from typing import Dict
 
-from Humanoid_MARL.agent.ppo.train_humanoids import train as train_humanoid
+from Humanoid_MARL.agent.ppo.train_humanoids import train as train_humanoids
+from Humanoid_MARL.agent.ppo.train_humanoid import train as train_humanoid
 from Humanoid_MARL.agent.ppo.train_lstm import train as train_lstm
 from Humanoid_MARL.agent.ppo.train_ant import train as train_ant
 from Humanoid_MARL.agent.ppo.linked_ball_train import train as train_linked_ball
@@ -28,7 +29,8 @@ def cmd_args():
         type=str,
         # default="point_mass",
         # default="ants",
-        default="humanoids",
+        # default="humanoids",
+        default="humanoid",
         # default="linked_balls",
         # default="simple_robots",
         help="environment name",
@@ -45,19 +47,20 @@ def main(args):
     project_name = f"MARL_ppo_{env_name}"
     # ================ Config ================
     # ================ Logging ===============
-    if not config["train_config"]["debug"]:
-        gpu_info = f"GPU {gpu_index} | env_name {env_name}"
-        logger = WandbLogger(project_name, config=config, notes=gpu_info)
-        config["train_config"]["logger"] = logger
+    if not config["train_config"].get("debug"):
+        if env_name not in ["humanoid"]:
+            gpu_info = f"GPU {gpu_index} | env_name {env_name}"
+            logger = WandbLogger(project_name, config=config, notes=gpu_info)
+            config["train_config"]["logger"] = logger
     # ================ Timing ================
     times = [datetime.now()]
     # ================ Timing ================
-    if config["train_config"]["debug"]:
+    if config["train_config"].get("debug"):
         if (
             config["train_config"]["env_name"] == "humanoids"
             or config["train_config"]["env_name"] == "humanoids_wall"
         ):
-            train_humanoid(
+            train_humanoids(
                 **config["train_config"],
                 env_config=config["env_config"],
                 network_config=config["network_config"],
@@ -103,7 +106,7 @@ def main(args):
             config["train_config"]["env_name"] == "humanoids"
             or config["train_config"]["env_name"] == "humanoids_wall"
         ):
-            train_humanoid(
+            train_humanoids(
                 **config["train_config"],
                 env_config=config["env_config"],
                 network_config=config["network_config"],
@@ -136,6 +139,11 @@ def main(args):
                 env_config=config["env_config"],
                 network_config=config["network_config"],
                 agent_config=config["agent_config"],
+            )
+        elif config["train_config"]["env_name"] == "humanoid":
+            train_humanoid(
+                **config["train_config"],
+                network_config=config["network_config"],
             )
 
 

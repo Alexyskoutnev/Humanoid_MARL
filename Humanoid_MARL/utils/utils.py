@@ -79,11 +79,7 @@ def load_reward_config(path: str, env: str) -> Dict:
 def load_train_config(path: str) -> Dict:
     with open(path, "r") as f:
         config = yaml.safe_load(f)
-        if config["debug"]:
-            _debug_config(config)
-            env_name = config["env_name"] + "_debug"
-        else:
-            env_name = config["env_name"]
+        env_name = config["env_name"]
         config["env_name"] = env_name
         return config
 
