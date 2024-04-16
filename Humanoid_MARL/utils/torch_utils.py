@@ -21,7 +21,6 @@ def save_model(agents: List[Agent], network_arch: Dict, model_name: str) -> None
             f"num_steps_{i}": agent.num_steps,
         }
         state_dicts["agents"].append(agent_dict)
-
     torch.save(state_dicts, filename)
     print(f"Agents saved to {filename}")
 

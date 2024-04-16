@@ -11,7 +11,7 @@ import brax
 
 from Humanoid_MARL import envs
 from Humanoid_MARL.utils.utils import seed_everything
-from Humanoid_MARL.utils.torch_utils import save_models, load_models
+from Humanoid_MARL.utils.torch_utils import save_model, load_models
 from brax.envs.wrappers import gym as gym_wrapper
 from brax.envs.wrappers import torch as torch_wrapper
 from brax.io import metrics
@@ -340,11 +340,12 @@ def train(
             "losses/total_loss": total_loss,
         }
         print("progress", progress)
+        print("Current Mean Reward", np.mean(running_mean[3:]))
         running_mean.append([progress.get("eval/episode_reward").item()])
-        if np.mean(running_mean[3:]) > 2500:
+        if np.mean(running_mean[3:]) > 2000:
             break
         if eval_i % 2 == 0:
-            save_models([agent], network_arch, model_name=model_name)
+            save_model([agent], network_arch, model_name=model_name)
         if eval_i == eval_frequency:
             break
         observation = env.reset()
