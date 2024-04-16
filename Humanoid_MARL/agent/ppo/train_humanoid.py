@@ -340,7 +340,7 @@ def train(
             "losses/total_loss": total_loss,
         }
         print("progress", progress)
-        running_mean.append(progress.get("eval/episode_reward"))
+        running_mean.append([progress.get("eval/episode_reward").item()])
         if np.mean(running_mean[3:]) > 2500:
             break
         if eval_i % 2 == 0:
