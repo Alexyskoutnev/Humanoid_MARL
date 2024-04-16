@@ -318,6 +318,7 @@ def train(
     agent = torch.jit.script(agent.to(device))
     agent = agent.to(device)
     optimizer = optim.Adam(agent.parameters(), lr=learning_rate)
+    running_mean = []
 
     sps = 0
     total_steps = 0
@@ -339,6 +340,9 @@ def train(
             "losses/total_loss": total_loss,
         }
         print("progress", progress)
+        running_mean.append(progress.get("eval/episode_reward"))
+        if np.mean(running_mean[3:]) > 2500:
+            break
         if eval_i % 2 == 0:
             save_models([agent], network_arch, model_name=model_name)
         if eval_i == eval_frequency:
