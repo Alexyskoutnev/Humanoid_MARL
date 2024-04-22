@@ -9,8 +9,8 @@ healthy_z_range:
   - 0.7
   - 2.5
 reset_noise_scale: 0.02
-chase_reward_weight: 0.0
-standup_cost : 1.0
+chase_reward_weight: 1.0
+standup_cost : 0.0
 and_done_flag : true
 or_done_flag : false
 full_state_other_agents : true
@@ -18,5 +18,5 @@ chase_reward_inverse : false
 tag_reward : false
 tag_reward_weight : 0.0
 backend : "spring"
-angle_penalty_weight : 1.0
+angle_penalty_weight : 0.1
 wall_penalty_weight : 0.0

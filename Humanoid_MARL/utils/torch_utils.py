@@ -77,10 +77,12 @@ def load_models_empty(
     return agents
 
 
-def load_models(filename: str, agent_class: Agent, device: str = "cpu") -> List[Agent]:
+def load_models(
+    filename: str, agent_class: Agent, device: str = "cpu", network_dict: Dict = None
+) -> List[Agent]:
 
     state_dicts = torch.load(filename)
-    network_arch = state_dicts["network_arch"]
+    network_arch = network_dict or state_dicts["network_arch"]
     num_agents = len(state_dicts["agents"])
     agents = [None for _ in range(num_agents)]
 

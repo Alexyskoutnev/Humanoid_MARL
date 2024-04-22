@@ -425,7 +425,9 @@ def setup_agents(
 
     if model_path:
         try:
-            agents = load_models(model_path, Agent, device=device)
+            agents = load_models(
+                model_path, Agent, device=device, network_dict=network_arch
+            )
             optimizers = [
                 optim.Adam(agent.parameters(), lr=float(learning_rate))
                 for agent in agents

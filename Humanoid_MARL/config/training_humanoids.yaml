@@ -7,7 +7,7 @@ num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.97
 learning_rate: 0.0003
-entropy_cost: 0.001
+entropy_cost: 0.01
 num_envs: 1024
 batch_size: 256
 env_name: humanoids
@@ -16,7 +16,7 @@ debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-model_path : Null
-# model_path : "models/20240422_083848_ppo_humanoid_copy_2.pt"
+# model_path : Null
+model_path : "models/20240422_122348_ppo_humanoids_12288000.pt"
 runnning_avg_length : 3
 time_series : false
