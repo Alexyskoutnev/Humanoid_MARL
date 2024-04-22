@@ -1,4 +1,4 @@
 # policy_network_dim : [244, 256, 256, 34]
 policy_network_dim : [353, 256, 256, 34]
-dummy_dim : 109
+dummy_dim : 107
 value_network_dim : [353, 256, 256, 1]

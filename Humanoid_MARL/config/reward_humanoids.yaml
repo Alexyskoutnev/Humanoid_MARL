@@ -1,16 +1,16 @@
 terminate_when_unhealthy: true
 include_standing_up_flag: false
-chase_reward: true
+chase_reward: false
 exclude_current_positions_from_observation: false
 forward_reward_weight: 0.0
 ctrl_cost_weight: 0.1
-healthy_reward: 0.0
+healthy_reward: 1.0
 healthy_z_range:
   - 0.7
   - 2.5
-reset_noise_scale: 0.1
-chase_reward_weight: 1.0
-standup_cost : 0.0
+reset_noise_scale: 0.02
+chase_reward_weight: 0.0
+standup_cost : 1.0
 and_done_flag : true
 or_done_flag : false
 full_state_other_agents : true
@@ -18,5 +18,5 @@ chase_reward_inverse : false
 tag_reward : false
 tag_reward_weight : 0.0
 backend : "spring"
-angle_penalty_weight : 0.5
-wall_penalty_weight : 1.0
+angle_penalty_weight : 1.0
+wall_penalty_weight : 0.0

@@ -134,9 +134,7 @@ def eval_unroll(
                 Agent.dist_postprocess(action)
             )
         else:
-            observation, reward, done, _ = _nan_filter(
-                env.step(Agent.dist_postprocess(action))
-            )
+            observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
     if get_jax_state:
@@ -512,6 +510,7 @@ def train(
         debug=debug,
         network_config=network_config,
     )
+    original_model_name = model_name.split(".")[0]
     # ========= create the agent =============
     for eval_i in range(eval_frequency + 1):
         if eval_flag:
@@ -545,13 +544,10 @@ def train(
                     total_loss=total_loss,
                     running_mean_reward=np.mean(running_mean[runnning_avg_length:]),
                 )
-                if progress_fn:
-                    progress_fn(total_steps, progress)
             # Save model functionality
             try:
-                save_models(
-                    agents, network_arch, model_name=model_name, notebook=notebook
-                )
+                model_name = f"{original_model_name}_{total_steps}.pt"
+                save_models(agents, network_arch, model_name=model_name)
             except:
                 print("Failed to save model")
             if np.mean(running_mean[2:]) >= eval_reward_limit:
@@ -613,6 +609,16 @@ def train(
                         num_agents=env.num_agents,
                     )
                     for idx, (agent, optimizer) in enumerate(zip(agents, optimizers)):
+                        if idx == 0 and (
+                            num_update_epochs - agent_config.get("agent_1_update_rate")
+                            < update_epoch
+                        ):
+                            continue
+                        if idx == 1 and (
+                            num_update_epochs - agent_config.get("agent_2_update_rate")
+                            < update_epoch
+                        ):
+                            continue
                         if agent_config.get("freeze_idx") == idx:
                             continue
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)

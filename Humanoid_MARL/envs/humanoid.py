@@ -183,7 +183,7 @@ class Humanoid(PipelineEnv):
         terminate_when_unhealthy=True,
         healthy_z_range=(1.0, 2.0),
         reset_noise_scale=1e-2,
-        exclude_current_positions_from_observation=True,
+        exclude_current_positions_from_observation=False,
         dummy_dims=0,
         backend="spring",
         **kwargs,
