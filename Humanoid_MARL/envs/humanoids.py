@@ -191,6 +191,7 @@ class Humanoids(PipelineEnv):
         chase_reward_inverse=False,
         full_state_other_agents=True,
         tag_reward=False,
+        random_spawn=False,
         backend="positional",
         **kwargs,
     ):
@@ -275,6 +276,7 @@ class Humanoids(PipelineEnv):
         self._or_done_flag = or_done_flag
         self._and_done_flag = and_done_flag
         self._full_state_other_agents = full_state_other_agents
+        self._random_spawn = random_spawn
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
@@ -284,9 +286,33 @@ class Humanoids(PipelineEnv):
         rng, rng1, rng2 = jax.random.split(rng, 3)
 
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
-        qpos = self.sys.init_q + jax.random.uniform(
-            rng1, (self.sys.q_size(),), minval=low, maxval=hi
-        )
+        if self._random_spawn:
+            pos_low = -2.0
+            pos_hi = 2.0
+            q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a1 = q_init_a1.at[0].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a1 = q_init_a1.at[1].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2 + 1].set(
+                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+            )
+            qpos = (
+                self.sys.init_q
+                + jax.random.uniform(rng1, (self.sys.q_size(),), minval=low, maxval=hi)
+                + q_init_a1
+                + q_init_a2
+            )
+        else:
+            qpos = self.sys.init_q + jax.random.uniform(
+                rng1, (self.sys.q_size(),), minval=low, maxval=hi
+            )
         qvel = jax.random.uniform(rng2, (self.sys.qd_size(),), minval=low, maxval=hi)
 
         pipeline_state = self.pipeline_init(qpos, qvel)
@@ -648,17 +674,17 @@ class Humanoids(PipelineEnv):
 
     def _dist_walls(self, pipeline_state: base.State) -> jax.Array:
         # Distance to wall #1 (x - position)
-        dist_1_a1_x = 3.0 - pipeline_state.x.pos[0, 0]
-        dist_1_a2_x = 3.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        dist_1_a1_x = 4.0 - pipeline_state.x.pos[0, 0]
+        dist_1_a2_x = 4.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
         # Distance to wall #2 (x - position)
-        dist_2_a1_x = -3.0 - pipeline_state.x.pos[0, 0]
-        dist_2_a2_x = -3.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+        dist_2_a1_x = -4.0 - pipeline_state.x.pos[0, 0]
+        dist_2_a2_x = -4.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
         # Distance to wall #3 (y - position)
-        dist_1_a1_y = 3.0 - pipeline_state.x.pos[0, 1]
-        dist_1_a2_y = 3.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        dist_1_a1_y = 4.0 - pipeline_state.x.pos[0, 1]
+        dist_1_a2_y = 4.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
         # Distance to wall #4 (y - position)
-        dist_2_a1_y = -3.0 - pipeline_state.x.pos[0, 1]
-        dist_2_a2_y = -3.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+        dist_2_a1_y = -4.0 - pipeline_state.x.pos[0, 1]
+        dist_2_a2_y = -4.0 - pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
         return jp.concatenate(
             [
                 dist_1_a1_x.reshape(-1),
@@ -675,8 +701,8 @@ class Humanoids(PipelineEnv):
     def _wall_penalty(self, pipeline_state: base.State) -> jax.Array:
         a1_pos = pipeline_state.x.pos[0][0:2]
         a2_pos = pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2][0:2]
-        wall_a1_pen = jp.clip(jp.exp(10 * (jp.abs(a1_pos) - 2.8)), 10e-5, 10)
-        wall_a2_pen = jp.clip(jp.exp(10 * (jp.abs(a2_pos) - 2.8)), 10e-5, 10)
+        wall_a1_pen = jp.clip(jp.exp(10 * (jp.abs(a1_pos) - 3.75)), 10e-5, 10)
+        wall_a2_pen = jp.clip(jp.exp(10 * (jp.abs(a2_pos) - 3.75)), 10e-5, 10)
         wall_a1_combined = jp.sum(wall_a1_pen)
         wall_a2_combined = jp.sum(wall_a2_pen)
         return (
