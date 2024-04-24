@@ -626,6 +626,7 @@ def train(
                         loss = agent.loss(td_minibatch._asdict(), agent_idx=idx)
                         optimizer.zero_grad()
                         loss.backward()
+                        torch.nn.utils.clip_grad_norm_(agent.parameters(), 0.5)
                         optimizer.step()
                         total_loss += loss
 

@@ -46,6 +46,8 @@ class Agent(nn.Module):
         self.lambda_ = 0.95
         self.epsilon = 0.2
         self.device = device
+        self.min_entropy_loss = 0.0
+        self.max_entropy_loss = 100.0  # TODO : Verify that this is true
 
     def _reset_loss(self):
         self.loss_dict = {
@@ -380,8 +382,8 @@ class Agent(nn.Module):
 
         # Entropy reward
         entropy = torch.mean(self.dist_entropy(loc, scale))
-        entropy_loss = (
-            self.entropy_cost * -entropy
+        entropy_loss = (self.entropy_cost * -entropy).clamp(
+            self.min_entropy_loss, self.max_entropy_loss
         )  # multiply the entropy coffeicent by the entropy cost to encourage exploration
         # print("entropy_loss: ", entropy_loss.item())
 
