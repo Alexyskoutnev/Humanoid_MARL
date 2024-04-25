@@ -9,14 +9,14 @@ discounting: 0.97
 learning_rate: 0.0003
 entropy_cost: 0.0005
 num_envs: 2048
-batch_size: 256
+batch_size: 512
 env_name: humanoids
 device: cuda
 debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
-model_path : Null
-# model_path : "models/20240422_173637_ppo_humanoids_1918894080.pt"
+# model_path : Null
+model_path : "models/20240424_145208_ppo_humanoids_94945280.pt"
 runnning_avg_length : 3
 time_series : false

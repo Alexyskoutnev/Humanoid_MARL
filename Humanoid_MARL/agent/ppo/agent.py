@@ -381,10 +381,20 @@ class Agent(nn.Module):
         # print("v_loss: ", v_loss.item())
 
         # Entropy reward
-        entropy = torch.mean(self.dist_entropy(loc, scale))
-        entropy_loss = (self.entropy_cost * -entropy).clamp(
-            self.min_entropy_loss, self.max_entropy_loss
-        )  # multiply the entropy coffeicent by the entropy cost to encourage exploration
+        is_negative = torch.any(scale <= 0)
+        if (
+            not is_negative
+            and not torch.isnan(scale).any()
+            and not torch.isinf(scale).any()
+        ):
+            scale = torch.abs(scale) + 1e-6
+            entropy = torch.mean(self.dist_entropy(loc, scale))
+            entropy_loss = self.entropy_cost * -entropy
+        else:
+            entropy_loss = torch.tensor(0.0, device=self.device)
+        # entropy_loss = (self.entropy_cost * -entropy).clamp(
+        #     self.min_entropy_loss, self.max_entropy_loss
+        # )  # multiply the entropy coffeicent by the entropy cost to encourage exploration
         # print("entropy_loss: ", entropy_loss.item())
 
         self.loss_dict["policy_loss"] = policy_loss.item()
