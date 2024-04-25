@@ -17,7 +17,7 @@ full_state_other_agents : true
 chase_reward_inverse : false
 tag_reward : true
 tag_reward_weight : 10.0
-backend : "positional"
+backend : "spring"
 angle_penalty_weight : 1.0
 wall_penalty_weight : 1.0
 random_spawn : true

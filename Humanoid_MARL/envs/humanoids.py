@@ -8,8 +8,10 @@ from brax import base
 from brax.envs.base import PipelineEnv, State
 from brax.io import mjcf
 import jax
+from jax import random
 import functools as ft
 from jax import numpy as jp
+from jax.scipy.spatial.transform import Rotation
 from Humanoid_MARL import PACKAGE_ROOT
 
 
@@ -192,7 +194,7 @@ class Humanoids(PipelineEnv):
         full_state_other_agents=True,
         tag_reward=False,
         random_spawn=False,
-        backend="positional",
+        backend="spring",
         **kwargs,
     ):
         humanoid_2_path = os.path.join(PACKAGE_ROOT, "assets", "humanoid_2_walls.xml")
@@ -289,25 +291,47 @@ class Humanoids(PipelineEnv):
         if self._random_spawn:
             pos_low = -2.0
             pos_hi = 2.0
+            min_angle = 0.0
+            max_angle = 180.0
+            angle_a1 = random.uniform(rng1, (1,), minval=min_angle, maxval=max_angle)[0]
+            rotation_quaternion_a1 = Rotation.from_euler(
+                "x", angle_a1, degrees=True
+            ).as_quat()
+            angle_a2 = random.uniform(rng2, (1,), minval=min_angle, maxval=max_angle)[0]
+            rotation_quaternion_a2 = Rotation.from_euler(
+                "z", angle_a2, degrees=True
+            ).as_quat()
             q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a1_ang = jp.zeros(self.sys.init_q.shape[0])
+            q_init_a2_ang = jp.zeros(self.sys.init_q.shape[0])
             q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a1 = q_init_a1.at[0].set(
                 jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
             )
             q_init_a1 = q_init_a1.at[1].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng, minval=pos_low, maxval=pos_hi)
             )
             q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng2, minval=pos_low, maxval=pos_hi)
             )
             q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2 + 1].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng, minval=pos_low, maxval=pos_hi)
             )
+            # q_init_a1_ang = q_init_a1_ang.at[3].set(rotation_quaternion_a1[0])
+            # q_init_a1_ang = q_init_a1_ang.at[4].set(rotation_quaternion_a1[1])
+            # q_init_a1_ang = q_init_a1_ang.at[5].set(rotation_quaternion_a1[2])
+            # q_init_a1_ang = q_init_a1_ang.at[6].set(rotation_quaternion_a1[3])
+            # q_init_a2_ang = q_init_a2_ang.at[self.sys.init_q.shape[0]//2 + 3:  self.sys.init_q.shape[0]//2 + 7].set(rotation_quaternion_a2)
+            # breakpoint()
+            # q_init_a1 = q_init_a1.at[3:7].set(rotation_quaternion_a1)
+            # q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0]//2 + 3:  self.sys.init_q.shape[0]//2 + 7].set(rotation_quaternion_a2)
+            # breakpoint()
             qpos = (
                 self.sys.init_q
                 + jax.random.uniform(rng1, (self.sys.q_size(),), minval=low, maxval=hi)
                 + q_init_a1
                 + q_init_a2
+                # + q_init_a1_ang
             )
         else:
             qpos = self.sys.init_q + jax.random.uniform(
