@@ -1,4 +1,5 @@
 from typing import Dict, Sequence, Tuple, ClassVar
+import logging
 import math
 import torch
 from torch import nn
@@ -85,6 +86,13 @@ class Agent(nn.Module):
 
         Parameters: scale: torch.Tensor : Scale of the normal distribution
         """
+        if (
+            torch.any(scale <= 0)
+            or torch.isnan(scale).any()
+            or torch.isinf(scale).any()
+        ):
+            logging.error("Scale is negative, nan or inf : ", scale)
+            scale = torch.abs(scale) + 1e-6
         return torch.normal(loc, scale)
 
     @classmethod
@@ -104,6 +112,13 @@ class Agent(nn.Module):
         Returns:
             torch.Tensor: Entropy of the normal distribution.
         """
+        if (
+            torch.any(scale <= 0)
+            or torch.isnan(scale).any()
+            or torch.isinf(scale).any()
+        ):
+            logging.error("Scale is negative, nan or inf : ", scale)
+            scale = torch.abs(scale) + 1e-6
         # Step 1: Calculate the log normalization term
         log_normalized = 0.5 * math.log(2 * math.pi) + torch.log(
             scale

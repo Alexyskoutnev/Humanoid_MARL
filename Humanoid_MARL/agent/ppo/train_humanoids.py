@@ -134,7 +134,9 @@ def eval_unroll(
                 Agent.dist_postprocess(action)
             )
         else:
-            observation, reward, done, _ = env.step(Agent.dist_postprocess(action))
+            observation, reward, done, _ = _nan_filter(
+                env.step(Agent.dist_postprocess(action))
+            )
         episodes += torch.sum(done)
         episode_reward += torch.sum(reward)
     if get_jax_state:
@@ -230,7 +232,9 @@ def train_unroll(
         one_unroll = StepData([observation], [], [], [], [], [])
         for i in range(unroll_length):
             logits, action = get_agent_actions(agents, observation, env.obs_dims_tuple)
-            observation, reward, done, info = env.step(Agent.dist_postprocess(action))
+            observation, reward, done, info = _nan_filter(
+                env.step(Agent.dist_postprocess(action))
+            )
             one_unroll.observation.append(observation)
             one_unroll.logits.append(logits)
             one_unroll.action.append(action)
@@ -440,8 +444,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-    if not debug:
-        agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # if not debug:
+    #     agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 

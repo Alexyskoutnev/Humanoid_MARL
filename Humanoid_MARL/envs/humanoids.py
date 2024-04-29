@@ -6,6 +6,7 @@ from typing import Union, Tuple
 from brax import actuator
 from brax import base
 from brax.envs.base import PipelineEnv, State
+from brax.math import quat_rot_axis
 from brax.io import mjcf
 import jax
 from jax import random
@@ -282,6 +283,10 @@ class Humanoids(PipelineEnv):
         self._exclude_current_positions_from_observation = (
             exclude_current_positions_from_observation
         )
+        self.pos_low = -2.0
+        self.pos_hi = 2.0
+        self.min_angle = 0.0
+        self.max_angle = jp.pi
 
     def reset(self, rng: jax.Array = jax.random.PRNGKey(seed=1)) -> State:
         """Resets the environment to an initial state."""
@@ -289,49 +294,48 @@ class Humanoids(PipelineEnv):
 
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
         if self._random_spawn:
-            pos_low = -2.0
-            pos_hi = 2.0
-            min_angle = 0.0
-            max_angle = 180.0
-            angle_a1 = random.uniform(rng1, (1,), minval=min_angle, maxval=max_angle)[0]
-            rotation_quaternion_a1 = Rotation.from_euler(
-                "x", angle_a1, degrees=True
-            ).as_quat()
-            angle_a2 = random.uniform(rng2, (1,), minval=min_angle, maxval=max_angle)[0]
-            rotation_quaternion_a2 = Rotation.from_euler(
-                "z", angle_a2, degrees=True
-            ).as_quat()
+            angle_a1 = random.uniform(
+                rng1, (1,), minval=self.min_angle, maxval=self.max_angle
+            )[0]
+            axis_rot = jp.array([0.0, 0.0, 1.0])
+            rotation_quaternion_a1 = quat_rot_axis(axis_rot, angle_a1)
+            rotation_quaternion_a1 = rotation_quaternion_a1.at[0].set(
+                rotation_quaternion_a1[0] - 1.0
+            )
+            angle_a2 = random.uniform(
+                rng2, (1,), minval=self.min_angle, maxval=self.max_angle
+            )[0]
+            rotation_quaternion_a2 = quat_rot_axis(axis_rot, angle_a2)
+            rotation_quaternion_a2 = rotation_quaternion_a2.at[0].set(
+                rotation_quaternion_a2[0] - 1.0
+            )
             q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a1_ang = jp.zeros(self.sys.init_q.shape[0])
             q_init_a2_ang = jp.zeros(self.sys.init_q.shape[0])
             q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a1 = q_init_a1.at[0].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng1, minval=self.pos_low, maxval=self.pos_hi)
             )
             q_init_a1 = q_init_a1.at[1].set(
-                jax.random.uniform(rng, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng, minval=self.pos_low, maxval=self.pos_hi)
             )
             q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2].set(
-                jax.random.uniform(rng2, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng2, minval=self.pos_low, maxval=self.pos_hi)
             )
             q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0] // 2 + 1].set(
-                jax.random.uniform(rng, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng, minval=self.pos_low, maxval=self.pos_hi)
             )
-            # q_init_a1_ang = q_init_a1_ang.at[3].set(rotation_quaternion_a1[0])
-            # q_init_a1_ang = q_init_a1_ang.at[4].set(rotation_quaternion_a1[1])
-            # q_init_a1_ang = q_init_a1_ang.at[5].set(rotation_quaternion_a1[2])
-            # q_init_a1_ang = q_init_a1_ang.at[6].set(rotation_quaternion_a1[3])
-            # q_init_a2_ang = q_init_a2_ang.at[self.sys.init_q.shape[0]//2 + 3:  self.sys.init_q.shape[0]//2 + 7].set(rotation_quaternion_a2)
-            # breakpoint()
-            # q_init_a1 = q_init_a1.at[3:7].set(rotation_quaternion_a1)
-            # q_init_a2 = q_init_a2.at[self.sys.init_q.shape[0]//2 + 3:  self.sys.init_q.shape[0]//2 + 7].set(rotation_quaternion_a2)
-            # breakpoint()
+            q_init_a1_ang = q_init_a1_ang.at[3:7].set(rotation_quaternion_a1)
+            q_init_a2_ang = q_init_a2_ang.at[
+                self.sys.init_q.shape[0] // 2 + 3 : self.sys.init_q.shape[0] // 2 + 7
+            ].set(rotation_quaternion_a2)
             qpos = (
                 self.sys.init_q
                 + jax.random.uniform(rng1, (self.sys.q_size(),), minval=low, maxval=hi)
                 + q_init_a1
                 + q_init_a2
-                # + q_init_a1_ang
+                + q_init_a1_ang
+                + q_init_a2_ang
             )
         else:
             qpos = self.sys.init_q + jax.random.uniform(
@@ -403,6 +407,16 @@ class Humanoids(PipelineEnv):
         ctrl_cost = self._ctrl_cost_weight * jp.sum(jp.square(action), axis=1)
         return ctrl_cost
 
+    def _track_reward_fn(self, pipeline_state):
+        dx = (
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 0]
+            - pipeline_state.x.pos[0, 0]
+        ) / self.dt
+        dy = (
+            pipeline_state.x.pos[pipeline_state.x.pos.shape[0] // 2, 1]
+            - pipeline_state.x.pos[0, 1]
+        ) / self.dt
+
     def _chase_reward_fn(self, pipeline_state):
         _dist_diff = jp.sqrt(
             (
@@ -420,8 +434,13 @@ class Humanoids(PipelineEnv):
             persuader_reward = jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight
             evader_reward = -(jp.exp(-_dist_diff * 0.1) * self._chase_reward_weight)
         else:
-            persuader_reward = -_dist_diff * self._chase_reward_weight
+            # persuader_reward = jp.clip(jp.exp(1.0 / _dist_diff), 0.0, 10.0) * self._chase_reward_weight
+
+            persuader_reward = -(_dist_diff) * self._chase_reward_weight
+            # persuader_reward = -jp.exp(_dist_diff) * self._chase_reward_weight
             evader_reward = _dist_diff * self._chase_reward_weight
+            # evader_reward = jp.clip(jp.exp(_dist_diff), 0.0, 10.0) * self._chase_reward_weight
+            # evader_reward = jp.exp(_dist_diff) * self._chase_reward_weight
         return jp.concatenate([persuader_reward.reshape(-1), evader_reward.reshape(-1)])
 
     def _tag_reward_left_hand_fn(self, pipeline_state, threshold=0.5):
@@ -469,6 +488,7 @@ class Humanoids(PipelineEnv):
         forward_reward = self._forward_reward_weight * jp.exp(
             velocity[:, 0] ** 2 + velocity[:, 1] ** 2
         ).clip(0, 10)
+        forward_reward = forward_reward.at[0].set(0.0)
         # forward_reward = self._forward_reward_weight * jp.abs(jp.sqrt(
         #     velocity[:, 0] ** 2
         # ))
