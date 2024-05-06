@@ -71,7 +71,7 @@ def load_network_config(path: str) -> Dict:
         return yaml.safe_load(f)
 
 
-def load_reward_config(path: str, env: str) -> Dict:
+def load_reward_config(path: str) -> Dict:
     with open(path, "r") as f:
         return yaml.safe_load(f)
 
@@ -84,12 +84,10 @@ def load_train_config(path: str) -> Dict:
         return config
 
 
-def load_config(env_name: str = "humanoids") -> Dict:
+def load_config(env_name: str = "humanoids", algo: str = "ippo") -> Dict:
     if env_name in ["humanoid", "humanoid_debug", "humanoid_wall"]:
         train_config = load_train_config(CONFIG_TRAIN_HUMANOID)
-        env_config = load_reward_config(
-            CONFIG_REWARD_HUMANOID, train_config["env_name"]
-        )
+        env_config = load_reward_config(CONFIG_REWARD_HUMANOID)
         agent_config = load_agent_config(CONFIG_AGENT_HUMANOID)
         network_config = load_network_config(CONFIG_NETWORK_HUMANOID)
         return {
@@ -101,9 +99,7 @@ def load_config(env_name: str = "humanoids") -> Dict:
         }
     elif env_name in ["humanoids"]:
         train_config = load_train_config(CONFIG_TRAIN_HUMANOIDS)
-        env_config = load_reward_config(
-            CONFIG_REWARD_HUMANOIDS, train_config["env_name"]
-        )
+        env_config = load_reward_config(CONFIG_REWARD_HUMANOIDS)
         agent_config = load_agent_config(CONFIG_AGENT_HUMANOIDS)
         network_config = load_network_config(CONFIG_NETWORK_HUMANOIDS)
         return {
@@ -114,22 +110,48 @@ def load_config(env_name: str = "humanoids") -> Dict:
             "train_config": train_config,
         }
     elif env_name in ["ants"]:
-        train_config = load_train_config(CONFIG_TRAIN_ANT)
-        env_config = load_reward_config(CONFIG_REWARD_ANT, train_config["env_name"])
-        agent_config = load_agent_config(CONFIG_AGENT_ANT)
-        network_config = load_network_config(CONFIG_NETWORK_ANT)
-        return {
-            "env_name": train_config["env_name"],
-            "env_config": env_config,
-            "agent_config": agent_config,
-            "network_config": network_config,
-            "train_config": train_config,
-        }
+        if algo == "ippo":
+            train_config = load_train_config(CONFIG_TRAIN_ANT)
+            env_config = load_reward_config(CONFIG_REWARD_ANT)
+            agent_config = load_agent_config(CONFIG_AGENT_ANT)
+            network_config = load_network_config(CONFIG_NETWORK_ANT)
+            return {
+                "env_name": train_config["env_name"],
+                "env_config": env_config,
+                "agent_config": agent_config,
+                "network_config": network_config,
+                "train_config": train_config,
+            }
+        elif algo == "mappo":
+            pass
+
+        elif algo == "isac":
+            pass
+
+        elif algo == "masac":
+            pass
+
+        elif algo == "maddpg":
+            pass
+
+        elif algo == "iddpg":
+            pass
+
+        else:
+            train_config = load_train_config(CONFIG_TRAIN_ANT)
+            env_config = load_reward_config(CONFIG_REWARD_ANT)
+            agent_config = load_agent_config(CONFIG_AGENT_ANT)
+            network_config = load_network_config(CONFIG_NETWORK_ANT)
+            return {
+                "env_name": train_config["env_name"],
+                "env_config": env_config,
+                "agent_config": agent_config,
+                "network_config": network_config,
+                "train_config": train_config,
+            }
     elif env_name in ["point_mass"]:
         train_config = load_train_config(CONFIG_TRAIN_POINT_MASS)
-        env_config = load_reward_config(
-            CONFIG_REWARD_POINT_MASS, train_config["env_name"]
-        )
+        env_config = load_reward_config(CONFIG_REWARD_POINT_MASS)
         agent_config = load_agent_config(CONFIG_AGENT_POINT_MASS)
         network_config = load_network_config(CONFIG_NETWORK_POINT_MASS)
         return {
@@ -141,9 +163,7 @@ def load_config(env_name: str = "humanoids") -> Dict:
         }
     elif env_name in ["linked_balls"]:
         train_config = load_train_config(CONFIG_TRAIN_LINKED_BALLS)
-        env_config = load_reward_config(
-            CONFIG_REWARD_LINKED_BALLS, train_config["env_name"]
-        )
+        env_config = load_reward_config(CONFIG_REWARD_LINKED_BALLS)
         agent_config = load_agent_config(CONFIG_AGENT_LINKED_BALLS)
         network_config = load_network_config(CONFIG_NETWORK_LINKED_BALLS)
         return {
@@ -155,9 +175,7 @@ def load_config(env_name: str = "humanoids") -> Dict:
         }
     elif env_name in ["simple_robots"]:
         train_config = load_train_config(CONFIG_TRAIN_SIMPLE_ROBOT)
-        env_config = load_reward_config(
-            CONFIG_REWARD_SIMPLE_ROBOT, train_config["env_name"]
-        )
+        env_config = load_reward_config(CONFIG_REWARD_SIMPLE_ROBOT)
         agent_config = load_agent_config(CONFIG_AGENT_SIMPLE_ROBOT)
         network_config = load_network_config(CONFIG_NETWORK_SIMPLE_ROBOT)
         return {

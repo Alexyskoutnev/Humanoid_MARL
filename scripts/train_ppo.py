@@ -17,7 +17,7 @@ from Humanoid_MARL.utils.logger import WandbLogger
 from Humanoid_MARL.utils.utils import load_config
 import Humanoid_MARL
 
-gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "1")
+gpu_index = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
 
 
 def cmd_args():
@@ -28,8 +28,8 @@ def cmd_args():
         "--env_name",
         type=str,
         # default="point_mass",
-        # default="ants",
-        default="humanoids",
+        default="ants",
+        # default="humanoids",
         # default="humanoid",
         # default="linked_balls",
         # default="simple_robots",

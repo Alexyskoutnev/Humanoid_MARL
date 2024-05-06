@@ -306,7 +306,6 @@ class Agent(nn.Module):
             torch.Tensor: Total loss computed as the sum of policy loss, value loss, and entropy loss.
         """
         self._reset_loss()  # reset the loss values in the loss dictionary
-
         # recieve the observation, action, reward, done, truncation, logits from the training data based on the current agent
         td_obs = td["observation"][
             :, :, agent_idx, :

@@ -438,8 +438,8 @@ def setup_agents(
         optimizers = [
             optim.Adam(agent.parameters(), lr=learning_rate) for agent in agents
         ]
-    if not debug:
-        agents = [torch.jit.script(agent.to(device)) for agent in agents]
+    # if not debug:
+    #     agents = [torch.jit.script(agent.to(device)) for agent in agents]
     return agents, optimizers, model_name, network_arch
 
 

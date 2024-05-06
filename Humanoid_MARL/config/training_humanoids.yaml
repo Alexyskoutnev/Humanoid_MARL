@@ -2,22 +2,22 @@ num_timesteps: 1_000_000_000
 eval_reward_limit: 10_000
 eval_frequency: 1000
 episode_length: 1000
-unroll_length: 5
+unroll_length: 10
 num_minibatches: 32
 num_update_epochs: 8
 discounting: 0.97
-learning_rate: 0.0003
-entropy_cost: 0.0001
-num_envs: 2048
-batch_size: 512
+learning_rate: 0.01
+entropy_cost: 0.00001
+num_envs: 512
+batch_size: 256
 env_name: humanoids
 device: cuda
 debug: false
 device_idx: 0
 eval_flag : true
 notebook: false
+model_path : "models/20240429_225433_ppo_humanoids_421724160.pt"
 # model_path : "models/20240426_084011_ppo_humanoids_348979200.pt"
-# model_path : "models/20240426_084011_ppo_humanoids_348979200.pt"
-model_path : Null
+# model_path : Null
 runnning_avg_length : 3
 time_series : false

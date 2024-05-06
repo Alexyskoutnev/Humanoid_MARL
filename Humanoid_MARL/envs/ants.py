@@ -231,7 +231,7 @@ class Ants(PipelineEnv):
 
     def reset(self, rng: jax.Array) -> State:
         """Resets the environment to an initial state."""
-        rng, rng1, rng2 = jax.random.split(rng, 3)
+        rng, rng1, rng2, rng3 = jax.random.split(rng, 4)
 
         low, hi = -self._reset_noise_scale, self._reset_noise_scale
         if self._random_spawn:
@@ -241,16 +241,16 @@ class Ants(PipelineEnv):
             q_init_a1 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a2 = jp.zeros(self.sys.init_q.shape[0])
             q_init_a1 = q_init_a1.at[0].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng, minval=pos_low, maxval=pos_hi)
             )
             q_init_a1 = q_init_a1.at[1].set(
                 jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
             )
             q_init_a2 = q_init_a2.at[9].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng2, minval=pos_low, maxval=pos_hi)
             )
             q_init_a2 = q_init_a2.at[10].set(
-                jax.random.uniform(rng1, minval=pos_low, maxval=pos_hi)
+                jax.random.uniform(rng3, minval=pos_low, maxval=pos_hi)
             )
             q = (
                 self.sys.init_q

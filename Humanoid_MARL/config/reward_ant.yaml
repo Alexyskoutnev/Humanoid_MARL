@@ -1,7 +1,7 @@
 terminate_when_unhealthy: true
 exclude_current_positions_from_observation: false # Change this to true
 use_contact_forces: false
-contact_cost_weight: 0.00
+contact_cost_weight: 0.0
 ctrl_cost_weight: 0.0
 healthy_reward: 0.0
 chase_reward_weight : 0.5
@@ -20,4 +20,4 @@ backend : "spring"
 random_spawn : false
 stand_up_reward_weight : 0.0
 angle_penalty_weight : 0.5
-wall_penalty_weight : 1.0
+wall_penalty_weight : 2.0
