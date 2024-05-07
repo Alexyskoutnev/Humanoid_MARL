@@ -123,7 +123,17 @@ def load_config(env_name: str = "humanoids", algo: str = "ippo") -> Dict:
                 "train_config": train_config,
             }
         elif algo == "mappo":
-            pass
+            train_config = load_train_config(CONFIG_TRAIN_ANT_MAPPO)
+            env_config = load_reward_config(CONFIG_REWARD_ANT_MAPPO)
+            agent_config = load_agent_config(CONFIG_AGENT_ANT_MAPPO)
+            network_config = load_network_config(CONFIG_NETWORK_ANT_MAPPO)
+            return {
+                "env_name": train_config["env_name"],
+                "env_config": env_config,
+                "agent_config": agent_config,
+                "network_config": network_config,
+                "train_config": train_config,
+            }
 
         elif algo == "isac":
             pass

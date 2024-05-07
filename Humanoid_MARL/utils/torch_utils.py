@@ -25,6 +25,46 @@ def save_model(agents: List[Agent], network_arch: Dict, model_name: str) -> None
     print(f"Agents saved to {filename}")
 
 
+def load_model_central_critic_agent(
+    filename: str, agent_class: Agent, device: str = "cpu", network_dict: Dict = None
+) -> Agent:
+    state_dicts = torch.load(filename)
+    network_arch = network_dict or state_dicts["network_arch"]
+    agent = agent_class(**network_arch).to(device)
+    agent.policy[0].load_state_dict(state_dicts[f"agent_policy_0"])
+    agent.policy[1].load_state_dict(state_dicts[f"agent_policy_1"])
+    agent.value.load_state_dict(state_dicts[f"agent_value"])
+    agent.running_mean[0] = state_dicts[f"running_mean_0"]
+    agent.running_variance[0] = state_dicts[f"running_variance_0"]
+    agent.num_steps = state_dicts[f"num_steps"]
+    agent.running_mean[1] = state_dicts[f"running_mean_1"]
+    agent.running_variance[1] = state_dicts[f"running_variance_1"]
+    agent.eval()
+    print(f"Model loaded from {filename}")
+    return agent
+
+
+def save_model_central_critic_agent(
+    agents, network_arch: Dict, model_name: str, notebook: bool = False
+):
+    filename = os.path.join(SAVE_MODELS, model_name)
+    state_dicts = {"network_arch": network_arch}
+    agent_dict = {
+        f"agent_policy_{0}": agents.policy[0].state_dict(),
+        f"agent_policy_{1}": agents.policy[1].state_dict(),
+        f"agent_value": agents.value.state_dict(),
+        f"running_mean_{0}": agents.running_mean[0],
+        f"running_variance_{0}": agents.running_variance[0],
+        f"num_steps": agents.num_steps,
+        f"running_mean_{1}": agents.running_mean[1],
+        f"running_variance_{1}": agents.running_variance[1],
+    }
+
+    state_dicts.update(agent_dict)
+    torch.save(state_dicts, filename)
+    print(f"Agents saved to {filename}")
+
+
 def save_models(
     agents: List[Agent], network_arch: Dict, model_name: str, notebook: bool = False
 ) -> None:

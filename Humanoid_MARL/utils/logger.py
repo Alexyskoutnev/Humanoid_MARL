@@ -72,30 +72,34 @@ class WandbLogger:
     def log_epoch_loss(
         self, agent_idx: int, loss_dict: Dict[str, float], epoch_num: int = 1
     ) -> None:
-        wandb.log(
-            {
-                f"losses/total_loss_a{str(agent_idx)}": loss_dict["total_loss"]
-                / epoch_num
-            }
-        )
-        wandb.log(
-            {
-                f"losses/policy_loss_a{str(agent_idx)}": loss_dict["policy_loss"]
-                / epoch_num
-            }
-        )
-        wandb.log(
-            {
-                f"losses/value_loss_a{str(agent_idx)}": loss_dict["value_loss"]
-                / epoch_num
-            }
-        )
-        wandb.log(
-            {
-                f"losses/entropy_loss_a{str(agent_idx)}": loss_dict["entropy_loss"]
-                / epoch_num
-            }
-        )
+        if agent_idx is not None:
+            wandb.log(
+                {
+                    f"losses/total_loss_a{str(agent_idx)}": loss_dict["total_loss"]
+                    / epoch_num
+                }
+            )
+            wandb.log(
+                {
+                    f"losses/policy_loss_a{str(agent_idx)}": loss_dict["policy_loss"]
+                    / epoch_num
+                }
+            )
+            wandb.log(
+                {
+                    f"losses/value_loss_a{str(agent_idx)}": loss_dict["value_loss"]
+                    / epoch_num
+                }
+            )
+            wandb.log(
+                {
+                    f"losses/entropy_loss_a{str(agent_idx)}": loss_dict["entropy_loss"]
+                    / epoch_num
+                }
+            )
+        else:
+            for key, value in loss_dict.items():
+                wandb.log({f"losses/{key}": value / epoch_num})
 
     def log_network_loss(
         self, critic_loss: float, actor_loss: float, entropy_loss: float
@@ -114,5 +118,9 @@ class WandbLogger:
     def log_gradient_info(
         self, agent_idx: int, gradient_info: Dict[str, float]
     ) -> None:
-        for key, value in gradient_info.items():
-            wandb.log({f"gradients/{key}_a{str(agent_idx)}": value})
+        if agent_idx is not None:
+            for key, value in gradient_info.items():
+                wandb.log({f"gradients/{key}_a{str(agent_idx)}": value})
+        else:
+            for key, value in gradient_info.items():
+                wandb.log({f"gradients/{key}": value})
